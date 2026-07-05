@@ -1,0 +1,1254 @@
+<title>Little Agents — Spy Academy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+  :root {
+    --bg-deep: #141B33;
+    --bg-panel: #1E2A4A;
+    --bg-raised: #2A3A63;
+    --outline: #3D5087;
+    --gold: #FFC94D;
+    --gold-deep: #E8A013;
+    --mint: #5DE0A1;
+    --coral: #FF7B6B;
+    --sky: #6BC5FF;
+    --lilac: #B79CFF;
+    --text-bright: #FFFFFF;
+    --text-soft: #AAB7DA;
+    --text-on-gold: #3A2A00;
+    --scroll-bg: #2E2338;
+    --scroll-panel: #3D2F4A;
+    --parchment: #F4E3BE;
+    --parchment-ink: #4A3520;
+    --round-stack: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: #0B1024;
+    font-family: var(--round-stack);
+    color: var(--text-bright);
+    overscroll-behavior: none;
+  }
+
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-deep);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.4s;
+  }
+  #app.scroll-world { background: var(--scroll-bg); }
+
+  /* ---------- shared chrome ---------- */
+  .header {
+    display: flex;
+    align-items: center;
+    padding: 10px 8px 4px;
+    min-height: 58px;
+  }
+  .back-btn {
+    width: 64px; height: 56px;
+    border: none; background: none;
+    font-size: 26px; cursor: pointer;
+    color: var(--text-bright);
+    border-radius: 999px;
+  }
+  .header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+  }
+  .header-spacer { width: 64px; }
+
+  .body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 16px 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  button { font-family: inherit; }
+  button:focus-visible, .tile:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+  .big-btn {
+    min-height: 72px;
+    border: none;
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--text-on-gold);
+    font-size: 24px;
+    font-weight: 900;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: transform 0.08s;
+  }
+  .big-btn:active { transform: scale(0.96); }
+  .big-btn.lilac { background: var(--lilac); color: var(--bg-deep); }
+
+  /* ---------- profile select ---------- */
+  .brand {
+    text-align: center;
+    font-size: 36px;
+    font-weight: 900;
+    margin: 24px 0 2px;
+    text-wrap: balance;
+  }
+  .brand-sub { text-align: center; color: var(--text-soft); font-size: 17px; margin-bottom: 18px; }
+
+  .tile-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+  .avatar-tile {
+    width: 140px; height: 140px;
+    border-radius: 26px;
+    border: 5px solid var(--outline);
+    background: var(--bg-panel);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text-bright);
+    transition: transform 0.08s;
+  }
+  .avatar-tile:active { transform: scale(0.95); }
+  .avatar-tile .face { font-size: 58px; line-height: 1; }
+  .avatar-tile .name { font-size: 20px; font-weight: 900; margin-top: 6px; }
+  .avatar-tile.add { border-style: dashed; color: var(--text-soft); }
+
+  .new-agent-form { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .new-agent-form label { color: var(--text-soft); font-size: 14px; }
+  .new-agent-form input {
+    background: var(--bg-panel);
+    border: 3px solid var(--outline);
+    border-radius: 18px;
+    color: var(--text-bright);
+    font-size: 24px;
+    font-weight: 800;
+    font-family: inherit;
+    padding: 14px 16px;
+    width: 100%;
+  }
+  .avatar-pick-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .avatar-pick {
+    width: 64px; height: 64px;
+    font-size: 34px;
+    border-radius: 999px;
+    border: 4px solid transparent;
+    background: var(--bg-raised);
+    cursor: pointer;
+  }
+  .avatar-pick.picked { border-color: var(--gold); }
+
+  /* ---------- HQ ---------- */
+  .desk {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg-panel);
+    border-radius: 26px;
+    padding: 16px 18px;
+    margin-top: 4px;
+  }
+  .desk .spy { font-size: 52px; }
+  .desk .agent { font-size: 24px; font-weight: 900; }
+  .desk .rank { color: var(--gold); font-size: 16px; font-weight: 800; margin-top: 2px; }
+
+  .doors {
+    flex: 1;
+    display: flex; flex-wrap: wrap;
+    justify-content: center; align-content: center;
+    gap: 16px;
+    padding: 16px 0;
+  }
+  .door {
+    width: 145px; height: 160px;
+    border-radius: 26px;
+    border: 5px solid;
+    background: var(--bg-panel);
+    color: var(--text-bright);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.08s;
+  }
+  .door:active { transform: scale(0.95); }
+  .door .icon { font-size: 54px; line-height: 1; }
+  .door .label { font-size: 17px; font-weight: 900; }
+
+  .hq-footer { display: flex; justify-content: flex-end; }
+  .gate-btn {
+    width: 64px; height: 64px;
+    border: none; background: none;
+    font-size: 22px; opacity: 0.45;
+    cursor: pointer;
+    border-radius: 999px;
+    position: relative;
+  }
+  .gate-btn.holding::after {
+    content: "";
+    position: absolute; inset: 4px;
+    border-radius: 999px;
+    border: 3px solid var(--gold);
+    animation: gate-pulse 3s linear forwards;
+  }
+  @keyframes gate-pulse { from { opacity: 0.2; } to { opacity: 1; transform: scale(1.25); } }
+
+  /* ---------- mission map ---------- */
+  .map-path { display: flex; flex-direction: column; gap: 18px; padding: 10px 4px 24px; }
+  .map-row { width: 72%; }
+  .map-row.left  { align-self: flex-start; }
+  .map-row.right { align-self: flex-end; }
+  .node {
+    width: 100%;
+    border-radius: 26px;
+    border: 5px solid var(--gold);
+    background: var(--bg-panel);
+    color: var(--text-bright);
+    padding: 14px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .node .icon { font-size: 44px; line-height: 1; }
+  .node .title { font-size: 17px; font-weight: 900; text-align: center; }
+  .node .stamps { font-size: 18px; }
+  .node.done   { border-color: var(--mint); opacity: 0.92; }
+  .node.locked { border-color: var(--outline); opacity: 0.55; }
+  .node.daily  { border-color: var(--lilac); }
+  .node.pulse  { animation: node-pulse 1.4s ease-in-out infinite; }
+  @keyframes node-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .daily-tag { color: var(--lilac); font-weight: 900; font-size: 12px; letter-spacing: 2.5px; }
+  .limit-banner {
+    background: var(--bg-panel);
+    border-radius: 18px;
+    padding: 14px;
+    color: var(--text-soft);
+    text-align: center;
+    font-size: 16px;
+  }
+
+  /* ---------- briefing / stage ---------- */
+  .scene {
+    flex: 1;
+    min-height: 160px;
+    background: var(--bg-panel);
+    border-radius: 26px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px;
+  }
+  .scroll-world .scene { background: var(--scroll-panel); }
+  .scene .hero { font-size: 100px; line-height: 1; }
+  .scene .art-big {
+    font-size: clamp(52px, 18vw, 88px);
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.15;
+    word-spacing: 8px;
+  }
+  .count-grid {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 6px; max-width: 320px; font-size: 42px;
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px;
+    background: var(--bg-raised);
+    border-radius: 18px;
+    padding: 8px 14px;
+    font-size: 24px; font-weight: 900;
+    color: var(--gold);
+  }
+  .scroll-world .legend { background: rgba(0,0,0,0.25); }
+  .seq-row { display: flex; gap: 8px; }
+  .seq-box {
+    width: 50px; height: 50px;
+    border-radius: 12px;
+    border: 3px solid var(--outline);
+    background: rgba(0,0,0,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 900; color: var(--mint);
+  }
+  .seq-box.done { border-color: var(--mint); background: var(--bg-raised); }
+
+  .prompt-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .spy-face {
+    flex: none;
+    width: 74px; height: 74px;
+    border-radius: 999px;
+    border: 3px solid var(--gold);
+    background: var(--bg-raised);
+    font-size: 38px;
+    cursor: pointer;
+    position: relative;
+  }
+  .spy-face::after {
+    content: "🔊";
+    position: absolute; right: -4px; bottom: -4px;
+    font-size: 15px;
+    background: var(--gold);
+    border-radius: 999px;
+    padding: 2px 3px;
+  }
+  .prompt-caption {
+    flex: 1;
+    background: var(--bg-panel);
+    border-radius: 18px;
+    padding: 10px 14px;
+    color: var(--text-soft);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .scroll-world .prompt-caption { background: var(--scroll-panel); }
+
+  .pips { display: flex; justify-content: center; gap: 10px; margin: 2px 0 10px; }
+  .pip { width: 15px; height: 15px; border-radius: 999px; background: var(--bg-raised); }
+  .pip.done { background: var(--mint); }
+  .pip.now  { background: var(--gold); }
+
+  .options { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 8px 0 4px; }
+  .tile {
+    min-width: 86px; min-height: 86px;
+    padding: 8px 18px;
+    border-radius: 22px;
+    border: 4px solid var(--outline);
+    background: var(--bg-raised);
+    color: var(--text-bright);
+    font-size: 42px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: transform 0.08s;
+  }
+  .tile:active { transform: scale(0.93); }
+  .tile .mini { font-size: 26px; }
+  .tile.word { font-size: 30px; min-width: 128px; }
+  .tile.hebrew { font-size: 48px; }
+  .tile.shake { animation: shake 0.4s; border-color: var(--coral); }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    15% { transform: translateX(9px); } 35% { transform: translateX(-9px); }
+    55% { transform: translateX(6px); } 75% { transform: translateX(-5px); }
+  }
+  .tile.glow {
+    border-color: var(--gold);
+    box-shadow: 0 0 18px 4px rgba(255, 201, 77, 0.55);
+    animation: glow 1s ease-in-out infinite;
+  }
+  @keyframes glow {
+    0%,100% { box-shadow: 0 0 10px 2px rgba(255,201,77,0.35); }
+    50%     { box-shadow: 0 0 22px 7px rgba(255,201,77,0.75); }
+  }
+  .tile.right { border-color: var(--mint); background: #234d3f; }
+
+  /* ---------- vault ---------- */
+  .vault-frame {
+    position: relative;
+    height: 300px;
+    border-radius: 26px;
+    overflow: hidden;
+    background: #0e1430;
+    margin: auto 0;
+  }
+  .vault-door {
+    position: absolute; top: 0; bottom: 0; width: 50%;
+    background: var(--bg-raised);
+    border: 4px solid var(--gold);
+  }
+  .scroll-world .vault-door { background: var(--scroll-panel); border-color: var(--parchment); }
+  .vault-door.l { left: 0; }
+  .vault-door.r { right: 0; }
+  .vault-wheel {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 86px;
+  }
+  .vault.opening .vault-wheel { animation: wheel-spin 1.4s ease-in-out forwards; }
+  .vault.opening .vault-door.l { animation: door-l 0.9s ease-in 1.4s forwards; }
+  .vault.opening .vault-door.r { animation: door-r 0.9s ease-in 1.4s forwards; }
+  @keyframes wheel-spin { to { transform: rotate(720deg); opacity: 0; } }
+  @keyframes door-l { to { transform: translateX(-105%); } }
+  @keyframes door-r { to { transform: translateX(105%); } }
+
+  .secret-card {
+    background: var(--bg-panel);
+    border: 4px solid var(--gold);
+    border-radius: 26px;
+    padding: 24px 20px;
+    text-align: center;
+    margin: auto 0;
+    animation: pop-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+  }
+  .secret-card.scroll { background: var(--parchment); border-color: var(--gold-deep); color: var(--parchment-ink); }
+  .secret-card .emblem { font-size: 52px; }
+  .secret-card .msg { font-size: 22px; font-weight: 700; line-height: 1.5; margin-top: 10px; text-wrap: balance; }
+  @keyframes pop-in { from { transform: scale(0.7); opacity: 0; } }
+
+  .confetti-bit { position: absolute; top: -40px; font-size: 24px; animation: fall linear forwards; pointer-events: none; z-index: 5; }
+  @keyframes fall { to { transform: translateY(110dvh) rotate(360deg); } }
+
+  /* ---------- debrief ---------- */
+  .debrief { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+  .debrief h2 { font-size: 30px; font-weight: 900; margin: 0; }
+  .debrief .stars { font-size: 40px; letter-spacing: 4px; }
+  .reward-card {
+    width: 90%;
+    background: var(--bg-panel);
+    border: 4px solid var(--sky);
+    border-radius: 26px;
+    padding: 18px;
+    animation: pop-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+  }
+  .reward-card .icon { font-size: 62px; }
+  .reward-card .name { font-size: 20px; font-weight: 900; margin-top: 6px; }
+  .badge-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .badge-chip {
+    background: var(--bg-raised);
+    border-radius: 18px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--gold);
+  }
+  .ceremony { font-size: 42px; font-weight: 900; color: var(--gold); letter-spacing: 5px; }
+  .ceremony-rank { font-size: 26px; font-weight: 800; }
+  .ceremony-medal { font-size: 96px; animation: pop-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1); }
+
+  /* ---------- locker & badges ---------- */
+  .locker-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 8px 0; }
+  .gadget {
+    width: 140px; height: 130px;
+    border-radius: 24px;
+    border: 4px solid var(--sky);
+    background: var(--bg-panel);
+    color: var(--text-bright);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 6px;
+    cursor: pointer;
+  }
+  .gadget .icon { font-size: 46px; line-height: 1; }
+  .gadget .name { font-size: 13px; font-weight: 800; text-align: center; }
+  .gadget.locked { border-color: var(--outline); opacity: 0.4; }
+  .gadget.wiggle { animation: wiggle 0.5s; }
+  @keyframes wiggle {
+    0%,100% { transform: rotate(0); }
+    20% { transform: rotate(10deg); } 45% { transform: rotate(-9deg); } 70% { transform: rotate(6deg); }
+  }
+
+  .id-card {
+    background: var(--bg-panel);
+    border: 5px solid var(--gold);
+    border-radius: 26px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .id-card .eyebrow { color: var(--gold); font-size: 12px; font-weight: 900; letter-spacing: 2.5px; }
+  .id-card .row { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
+  .id-card .avatar { font-size: 62px; }
+  .id-card .name { font-size: 28px; font-weight: 900; }
+  .id-card .rank { color: var(--gold); font-weight: 800; }
+  .id-card .meta { color: var(--text-soft); margin-top: 4px; font-size: 16px; }
+  .badge-wall { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .badge-slot {
+    width: 100px;
+    background: var(--bg-panel);
+    border-radius: 18px;
+    padding: 12px 6px;
+    text-align: center;
+  }
+  .badge-slot .icon { font-size: 36px; }
+  .badge-slot .name { font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+  .badge-slot.locked { opacity: 0.35; }
+
+  /* ---------- parent ---------- */
+  .modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 20;
+  }
+  .modal-card {
+    background: var(--bg-panel);
+    border-radius: 26px;
+    padding: 26px 22px;
+    width: 86%;
+    text-align: center;
+  }
+  .modal-card h3 { margin: 0 0 14px; font-size: 22px; }
+  .answer-row { display: flex; justify-content: center; gap: 12px; }
+  .answer-btn {
+    min-width: 76px; min-height: 64px;
+    border-radius: 18px;
+    border: none;
+    background: var(--bg-raised);
+    color: var(--text-bright);
+    font-size: 30px; font-weight: 900;
+    cursor: pointer;
+  }
+  .modal-cancel { background: none; border: none; color: var(--text-soft); font-size: 16px; margin-top: 18px; cursor: pointer; padding: 10px; }
+  .modal-wrong { color: var(--coral); font-size: 15px; margin: 0 0 10px; }
+
+  .parent-section {
+    background: var(--bg-panel);
+    border-radius: 22px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .parent-section h3 { color: var(--gold); font-size: 16px; margin: 0 0 10px; }
+  .parent-section p { font-size: 16px; line-height: 1.55; margin: 0 0 8px; }
+  .parent-section p.soft { color: var(--text-soft); font-size: 14px; }
+  .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .switch {
+    flex: none;
+    width: 62px; height: 36px;
+    border-radius: 999px;
+    border: none;
+    background: var(--bg-raised);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .switch::after {
+    content: "";
+    position: absolute; top: 4px; left: 4px;
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    background: var(--text-soft);
+    transition: left 0.2s, background 0.2s;
+  }
+  .switch.on { background: var(--gold); }
+  .switch.on::after { left: 30px; background: #fff; }
+  .choice-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .choice {
+    min-height: 48px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: none;
+    background: var(--bg-raised);
+    color: var(--text-bright);
+    font-size: 16px; font-weight: 800;
+    cursor: pointer;
+  }
+  .choice.on { background: var(--gold); color: var(--text-on-gold); }
+
+  .check-flash {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 96px;
+    pointer-events: none;
+    animation: pop-in 0.35s;
+    z-index: 4;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .node.pulse, .tile.glow { animation: none; }
+    .vault.opening .vault-wheel { animation-duration: 0.3s; }
+    .vault.opening .vault-door.l, .vault.opening .vault-door.r { animation-duration: 0.3s; animation-delay: 0.35s; }
+    .confetti-bit { display: none; }
+  }
+</style>
+
+<div id="app">
+  <div id="boot-fallback" style="padding:40px 24px; text-align:center; color:#AAB7DA; font-size:17px; line-height:1.6;">
+    <div style="font-size:56px">🕵️</div>
+    <p style="color:#fff; font-weight:800; font-size:22px; margin:12px 0 8px;">Spy Academy needs a real browser</p>
+    <p>If this message stays on screen, this viewer is blocking the game&#39;s code. Download this file and open it in Safari or Chrome &mdash; it works offline and saves progress on the device.</p>
+  </div>
+</div>
+
+<script>
+window.addEventListener("error", function (e) {
+  var el = document.getElementById("boot-fallback") || document.getElementById("app");
+  if (el) el.innerHTML = "<p style=&quot;padding:30px;color:#FF7B6B;font-size:16px&quot;>Something went wrong starting the game: " + String(e.message) + "</p>";
+});
+const CONTENT = {"templates":[{"key":"letter_match","track":"core","mode":"choice","parentLabel":"Letter Match (find the matching letter)"},{"key":"sound_lock","track":"core","mode":"choice","parentLabel":"Sound Lock (letter sounds)"},{"key":"count_gadgets","track":"core","mode":"choice","parentLabel":"Count the Gadgets (counting 1–10)"},{"key":"shape_cipher","track":"core","mode":"sequence","parentLabel":"Shape Cipher (decode with a legend)"},{"key":"pattern_breaker","track":"core","mode":"choice","parentLabel":"Pattern Breaker (what comes next)"},{"key":"name_code","track":"core","mode":"sequence","parentLabel":"Name Code (spell your own name)"},{"key":"missing_number","track":"core","mode":"choice","parentLabel":"Missing Number (number lines)"},{"key":"sight_word","track":"core","mode":"choice","parentLabel":"Sight Words (Dolch pre-primer)"},{"key":"alephbet_match","track":"scroll","mode":"choice","parentLabel":"Aleph-Bet Match (Hebrew letters)"},{"key":"hebrew_sound_lock","track":"scroll","mode":"choice","parentLabel":"Hebrew Sound Lock (letter sounds)"},{"key":"creation_count","track":"scroll","mode":"choice","parentLabel":"Days of Creation Counting"},{"key":"gematria","track":"scroll","mode":"sequence","parentLabel":"Gentle Gematria (aleph=1, bet=2)"}],"puzzles":[{"id":"letter_match_recruit_1_01","templateKey":"letter_match","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching S on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"S"},"options":[{"id":"S","label":"S"},{"id":"O","label":"O"},{"id":"X","label":"X"}],"answer":"S"}},{"id":"letter_match_recruit_1_02","templateKey":"letter_match","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching A on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"A"},"options":[{"id":"A","label":"A"},{"id":"T","label":"T"},{"id":"O","label":"O"}],"answer":"A"}},{"id":"letter_match_recruit_1_03","templateKey":"letter_match","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching M on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"M"},"options":[{"id":"M","label":"M"},{"id":"S","label":"S"},{"id":"I","label":"I"}],"answer":"M"}},{"id":"letter_match_recruit_1_04","templateKey":"letter_match","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching T on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"T"},"options":[{"id":"T","label":"T"},{"id":"V","label":"V"},{"id":"O","label":"O"}],"answer":"T"}},{"id":"letter_match_recruit_2_05","templateKey":"letter_match","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching E on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"E"},"options":[{"id":"E","label":"E"},{"id":"F","label":"F"},{"id":"L","label":"L"}],"answer":"E"}},{"id":"letter_match_recruit_2_06","templateKey":"letter_match","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching a on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"a"},"options":[{"id":"a","label":"a"},{"id":"e","label":"e"},{"id":"o","label":"o"}],"answer":"a"}},{"id":"letter_match_recruit_2_07","templateKey":"letter_match","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching g on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"g"},"options":[{"id":"g","label":"g"},{"id":"j","label":"j"},{"id":"y","label":"y"}],"answer":"g"}},{"id":"letter_match_recruit_2_08","templateKey":"letter_match","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching R on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"R"},"options":[{"id":"R","label":"R"},{"id":"P","label":"P"},{"id":"B","label":"B"}],"answer":"R"}},{"id":"letter_match_recruit_3_09","templateKey":"letter_match","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching b on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"b"},"options":[{"id":"b","label":"b"},{"id":"d","label":"d"},{"id":"p","label":"p"}],"answer":"b"}},{"id":"letter_match_recruit_3_10","templateKey":"letter_match","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching d on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"d"},"options":[{"id":"d","label":"d"},{"id":"b","label":"b"},{"id":"q","label":"q"}],"answer":"d"}},{"id":"letter_match_recruit_3_11","templateKey":"letter_match","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching m on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"m"},"options":[{"id":"m","label":"m"},{"id":"w","label":"w"},{"id":"n","label":"n"}],"answer":"m"}},{"id":"letter_match_recruit_3_12","templateKey":"letter_match","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"Agent, look at the secret letter. Find the matching u on your keypad.","hintLine":"Look closely, Agent. Which button looks exactly the same as the big letter?","art":{"kind":"emoji","value":"u"},"options":[{"id":"u","label":"u"},{"id":"n","label":"n"},{"id":"v","label":"v"}],"answer":"u"}},{"id":"sound_lock_recruit_1_13","templateKey":"sound_lock","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"This lock opens with the letter that says mmm, like in moon.","hintLine":"mmm... mmm... moon starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"M","label":"M"},{"id":"S","label":"S"},{"id":"T","label":"T"}],"answer":"M"}},{"id":"sound_lock_recruit_1_14","templateKey":"sound_lock","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"This lock opens with the letter that says sss, like in sun.","hintLine":"sss... sss... sun starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"S","label":"S"},{"id":"M","label":"M"},{"id":"O","label":"O"}],"answer":"S"}},{"id":"sound_lock_recruit_1_15","templateKey":"sound_lock","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"This lock opens with the letter that says tuh, like in turtle.","hintLine":"tuh... tuh... turtle starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"T","label":"T"},{"id":"S","label":"S"},{"id":"A","label":"A"}],"answer":"T"}},{"id":"sound_lock_recruit_1_16","templateKey":"sound_lock","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"This lock opens with the letter that says ah, like in octopus.","hintLine":"ah... ah... octopus starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"O","label":"O"},{"id":"T","label":"T"},{"id":"M","label":"M"}],"answer":"O"}},{"id":"sound_lock_recruit_1_17","templateKey":"sound_lock","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"This lock opens with the letter that says aah, like in apple.","hintLine":"aah... aah... apple starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"A","label":"A"},{"id":"O","label":"O"},{"id":"S","label":"S"}],"answer":"A"}},{"id":"sound_lock_recruit_2_18","templateKey":"sound_lock","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"This lock opens with the letter that says buh, like in ball.","hintLine":"buh... buh... ball starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"B","label":"B"},{"id":"P","label":"P"},{"id":"D","label":"D"}],"answer":"B"}},{"id":"sound_lock_recruit_2_19","templateKey":"sound_lock","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"This lock opens with the letter that says fff, like in fish.","hintLine":"fff... fff... fish starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"F","label":"F"},{"id":"V","label":"V"},{"id":"S","label":"S"}],"answer":"F"}},{"id":"sound_lock_recruit_2_20","templateKey":"sound_lock","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"This lock opens with the letter that says nnn, like in nest.","hintLine":"nnn... nnn... nest starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"N","label":"N"},{"id":"M","label":"M"},{"id":"R","label":"R"}],"answer":"N"}},{"id":"sound_lock_recruit_2_21","templateKey":"sound_lock","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"This lock opens with the letter that says puh, like in penguin.","hintLine":"puh... puh... penguin starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"P","label":"P"},{"id":"B","label":"B"},{"id":"T","label":"T"}],"answer":"P"}},{"id":"sound_lock_recruit_2_22","templateKey":"sound_lock","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"This lock opens with the letter that says duh, like in dog.","hintLine":"duh... duh... dog starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"D","label":"D"},{"id":"B","label":"B"},{"id":"T","label":"T"}],"answer":"D"}},{"id":"sound_lock_recruit_2_23","templateKey":"sound_lock","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"This lock opens with the letter that says kuh, like in kite.","hintLine":"kuh... kuh... kite starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"K","label":"K"},{"id":"G","label":"G"},{"id":"C","label":"C"}],"answer":"K"}},{"id":"sound_lock_recruit_3_24","templateKey":"sound_lock","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"This lock opens with the letter that says eh, like in egg.","hintLine":"eh... eh... egg starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"E","label":"E"},{"id":"I","label":"I"},{"id":"A","label":"A"}],"answer":"E"}},{"id":"sound_lock_recruit_3_25","templateKey":"sound_lock","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"This lock opens with the letter that says ih, like in igloo.","hintLine":"ih... ih... igloo starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"I","label":"I"},{"id":"E","label":"E"},{"id":"A","label":"A"}],"answer":"I"}},{"id":"sound_lock_recruit_3_26","templateKey":"sound_lock","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"This lock opens with the letter that says guh, like in goat.","hintLine":"guh... guh... goat starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"G","label":"G"},{"id":"K","label":"K"},{"id":"J","label":"J"}],"answer":"G"}},{"id":"sound_lock_recruit_3_27","templateKey":"sound_lock","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"This lock opens with the letter that says juh, like in jet.","hintLine":"juh... juh... jet starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"J","label":"J"},{"id":"G","label":"G"},{"id":"Y","label":"Y"}],"answer":"J"}},{"id":"sound_lock_recruit_3_28","templateKey":"sound_lock","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"This lock opens with the letter that says uh, like in umbrella.","hintLine":"uh... uh... umbrella starts with that sound. Which letter makes it?","art":{"kind":"emoji","value":"🔒"},"options":[{"id":"U","label":"U"},{"id":"O","label":"O"},{"id":"A","label":"A"}],"answer":"U"}},{"id":"count_gadgets_recruit_1_29","templateKey":"count_gadgets","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, count the flashlights on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🔦","count":3},"options":[{"id":"2","label":"2"},{"id":"3","label":"3"},{"id":"4","label":"4"}],"answer":"3"}},{"id":"count_gadgets_recruit_1_30","templateKey":"count_gadgets","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, count the spy glasses on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🕶️","count":2},"options":[{"id":"1","label":"1"},{"id":"2","label":"2"},{"id":"3","label":"3"}],"answer":"2"}},{"id":"count_gadgets_recruit_1_31","templateKey":"count_gadgets","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, count the mission packs on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🎒","count":4},"options":[{"id":"3","label":"3"},{"id":"4","label":"4"},{"id":"5","label":"5"}],"answer":"4"}},{"id":"count_gadgets_recruit_1_32","templateKey":"count_gadgets","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"Agent, count the magnets on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🧲","count":5},"options":[{"id":"4","label":"4"},{"id":"5","label":"5"},{"id":"6","label":"6"}],"answer":"5"}},{"id":"count_gadgets_recruit_2_33","templateKey":"count_gadgets","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, count the keys on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🔑","count":6},"options":[{"id":"5","label":"5"},{"id":"6","label":"6"},{"id":"7","label":"7"},{"id":"8","label":"8"}],"answer":"6"}},{"id":"count_gadgets_recruit_2_34","templateKey":"count_gadgets","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, count the antennas on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"📡","count":7},"options":[{"id":"6","label":"6"},{"id":"7","label":"7"},{"id":"8","label":"8"},{"id":"9","label":"9"}],"answer":"7"}},{"id":"count_gadgets_recruit_2_35","templateKey":"count_gadgets","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, count the compasses on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🧭","count":5},"options":[{"id":"4","label":"4"},{"id":"5","label":"5"},{"id":"6","label":"6"},{"id":"7","label":"7"}],"answer":"5"}},{"id":"count_gadgets_recruit_2_36","templateKey":"count_gadgets","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"Agent, count the batteries on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🔋","count":8},"options":[{"id":"6","label":"6"},{"id":"7","label":"7"},{"id":"8","label":"8"},{"id":"9","label":"9"}],"answer":"8"}},{"id":"count_gadgets_recruit_3_37","templateKey":"count_gadgets","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"Agent, count the data disks on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"💾","count":9},"options":[{"id":"7","label":"7"},{"id":"8","label":"8"},{"id":"9","label":"9"},{"id":"10","label":"10"}],"answer":"9"}},{"id":"count_gadgets_recruit_3_38","templateKey":"count_gadgets","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"Agent, count the paperclips on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"📎","count":10},"options":[{"id":"8","label":"8"},{"id":"9","label":"9"},{"id":"10","label":"10"},{"id":"7","label":"7"}],"answer":"10"}},{"id":"count_gadgets_recruit_3_39","templateKey":"count_gadgets","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"Agent, count the headsets on the table. How many do you see?","hintLine":"Touch each one and count out loud with me. One... two... keep going!","art":{"kind":"emoji","value":"🎧","count":8},"options":[{"id":"8","label":"8"},{"id":"9","label":"9"},{"id":"10","label":"10"},{"id":"6","label":"6"}],"answer":"8"}},{"id":"shape_cipher_recruit_1_40","templateKey":"shape_cipher","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"A shape code! Use the legend, Agent. Read the shapes left to right and press their letters.","hintLine":"Start with the first shape. Find it in the legend — what letter does it stand for?","art":{"kind":"emoji","value":"🔺 🟡"},"options":[{"id":"G","label":"G"},{"id":"O","label":"O"}],"answer":["G","O"],"legend":[{"symbol":"🔺","means":"G"},{"symbol":"🟡","means":"O"}]}},{"id":"shape_cipher_recruit_1_41","templateKey":"shape_cipher","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"A shape code! Use the legend, Agent. Read the shapes left to right and press their letters.","hintLine":"Start with the first shape. Find it in the legend — what letter does it stand for?","art":{"kind":"emoji","value":"🟦 🟣"},"options":[{"id":"U","label":"U"},{"id":"P","label":"P"}],"answer":["U","P"],"legend":[{"symbol":"🟦","means":"U"},{"symbol":"🟣","means":"P"}]}},{"id":"shape_cipher_recruit_2_42","templateKey":"shape_cipher","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"A shape code! Use the legend, Agent. Read the shapes left to right and press their letters.","hintLine":"Start with the first shape. Find it in the legend — what letter does it stand for?","art":{"kind":"emoji","value":"🔺 🟡 🟦"},"options":[{"id":"C","label":"C"},{"id":"A","label":"A"},{"id":"T","label":"T"}],"answer":["C","A","T"],"legend":[{"symbol":"🔺","means":"C"},{"symbol":"🟡","means":"A"},{"symbol":"🟦","means":"T"}]}},{"id":"shape_cipher_recruit_2_43","templateKey":"shape_cipher","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"A shape code! Use the legend, Agent. Read the shapes left to right and press their letters.","hintLine":"Start with the first shape. Find it in the legend — what letter does it stand for?","art":{"kind":"emoji","value":"⭐ 🟣 🟡"},"options":[{"id":"S","label":"S"},{"id":"P","label":"P"},{"id":"Y","label":"Y"}],"answer":["S","P","Y"],"legend":[{"symbol":"⭐","means":"S"},{"symbol":"🟣","means":"P"},{"symbol":"🟡","means":"Y"}]}},{"id":"shape_cipher_recruit_3_44","templateKey":"shape_cipher","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"A shape code! Use the legend, Agent. Read the shapes left to right and press their letters.","hintLine":"Start with the first shape. Find it in the legend — what letter does it stand for?","art":{"kind":"emoji","value":"🔺 🟡 🟦 ⭐"},"options":[{"id":"S","label":"S"},{"id":"T","label":"T"},{"id":"O","label":"O"},{"id":"P","label":"P"}],"answer":["S","T","O","P"],"legend":[{"symbol":"🔺","means":"S"},{"symbol":"🟡","means":"T"},{"symbol":"🟦","means":"O"},{"symbol":"⭐","means":"P"}]}},{"id":"shape_cipher_recruit_3_45","templateKey":"shape_cipher","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"A shape code! Use the legend, Agent. Read the shapes left to right and press their letters.","hintLine":"Start with the first shape. Find it in the legend — what letter does it stand for?","art":{"kind":"emoji","value":"🟣 ⭐ 🟡 🔺"},"options":[{"id":"O","label":"O"},{"id":"P","label":"P"},{"id":"E","label":"E"},{"id":"N","label":"N"}],"answer":["O","P","E","N"],"legend":[{"symbol":"🟣","means":"O"},{"symbol":"⭐","means":"P"},{"symbol":"🟡","means":"E"},{"symbol":"🔺","means":"N"}]}},{"id":"pattern_breaker_recruit_1_46","templateKey":"pattern_breaker","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"The pattern lock! Say the pattern out loud, Agent. What comes next?","hintLine":"Read it again from the start. Listen to the beat of it — what belongs in the empty spot?","art":{"kind":"emoji","value":"🔴 🔵 🔴 🔵 🔴 ❔"},"options":[{"id":"🔵","label":"🔵"},{"id":"🔴","label":"🔴"},{"id":"🟡","label":"🟡"}],"answer":"🔵"}},{"id":"pattern_breaker_recruit_1_47","templateKey":"pattern_breaker","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"The pattern lock! Say the pattern out loud, Agent. What comes next?","hintLine":"Read it again from the start. Listen to the beat of it — what belongs in the empty spot?","art":{"kind":"emoji","value":"⭐ 🌙 ⭐ 🌙 ❔"},"options":[{"id":"🌙","label":"🌙"},{"id":"⭐","label":"⭐"},{"id":"☁️","label":"☁️"}],"answer":"⭐"}},{"id":"pattern_breaker_recruit_2_48","templateKey":"pattern_breaker","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"The pattern lock! Say the pattern out loud, Agent. What comes next?","hintLine":"Read it again from the start. Listen to the beat of it — what belongs in the empty spot?","art":{"kind":"emoji","value":"🍎 🍎 🍌 🍎 🍎 ❔"},"options":[{"id":"🍎","label":"🍎"},{"id":"🍌","label":"🍌"},{"id":"🍇","label":"🍇"}],"answer":"🍌"}},{"id":"pattern_breaker_recruit_2_49","templateKey":"pattern_breaker","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"The pattern lock! Say the pattern out loud, Agent. What comes next?","hintLine":"Read it again from the start. Listen to the beat of it — what belongs in the empty spot?","art":{"kind":"emoji","value":"🐟 🐢 🐢 🐟 🐢 ❔"},"options":[{"id":"🐟","label":"🐟"},{"id":"🐢","label":"🐢"},{"id":"🦀","label":"🦀"}],"answer":"🐢"}},{"id":"pattern_breaker_recruit_3_50","templateKey":"pattern_breaker","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"The pattern lock! Say the pattern out loud, Agent. What comes next?","hintLine":"Read it again from the start. Listen to the beat of it — what belongs in the empty spot?","art":{"kind":"emoji","value":"🔴 🟡 🔵 🔴 🟡 ❔"},"options":[{"id":"🔵","label":"🔵"},{"id":"🔴","label":"🔴"},{"id":"🟡","label":"🟡"}],"answer":"🔵"}},{"id":"pattern_breaker_recruit_3_51","templateKey":"pattern_breaker","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"The pattern lock! Say the pattern out loud, Agent. What comes next?","hintLine":"Read it again from the start. Listen to the beat of it — what belongs in the empty spot?","art":{"kind":"emoji","value":"🚗 🚌 🚁 🚗 🚌 ❔"},"options":[{"id":"🚗","label":"🚗"},{"id":"🚁","label":"🚁"},{"id":"🚌","label":"🚌"}],"answer":"🚁"}},{"id":"missing_number_recruit_1_52","templateKey":"missing_number","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"The countdown panel is broken, Agent! One number is missing. Which one goes in the gap?","hintLine":"Count along the panel with me and clap at the empty spot. What number did we clap on?","art":{"kind":"emoji","value":"1 2 ▢ 4"},"options":[{"id":"3","label":"3"},{"id":"5","label":"5"},{"id":"2","label":"2"}],"answer":"3"}},{"id":"missing_number_recruit_1_53","templateKey":"missing_number","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"The countdown panel is broken, Agent! One number is missing. Which one goes in the gap?","hintLine":"Count along the panel with me and clap at the empty spot. What number did we clap on?","art":{"kind":"emoji","value":"2 3 ▢ 5"},"options":[{"id":"4","label":"4"},{"id":"1","label":"1"},{"id":"6","label":"6"}],"answer":"4"}},{"id":"missing_number_recruit_2_54","templateKey":"missing_number","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"The countdown panel is broken, Agent! One number is missing. Which one goes in the gap?","hintLine":"Count along the panel with me and clap at the empty spot. What number did we clap on?","art":{"kind":"emoji","value":"4 5 ▢ 7"},"options":[{"id":"6","label":"6"},{"id":"8","label":"8"},{"id":"3","label":"3"}],"answer":"6"}},{"id":"missing_number_recruit_2_55","templateKey":"missing_number","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"The countdown panel is broken, Agent! One number is missing. Which one goes in the gap?","hintLine":"Count along the panel with me and clap at the empty spot. What number did we clap on?","art":{"kind":"emoji","value":"6 ▢ 8 9"},"options":[{"id":"7","label":"7"},{"id":"5","label":"5"},{"id":"10","label":"10"}],"answer":"7"}},{"id":"missing_number_recruit_3_56","templateKey":"missing_number","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"The countdown panel is broken, Agent! One number is missing. Which one goes in the gap?","hintLine":"Count along the panel with me and clap at the empty spot. What number did we clap on?","art":{"kind":"emoji","value":"10 9 ▢ 7"},"options":[{"id":"8","label":"8"},{"id":"6","label":"6"},{"id":"9","label":"9"}],"answer":"8"}},{"id":"missing_number_recruit_3_57","templateKey":"missing_number","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"The countdown panel is broken, Agent! One number is missing. Which one goes in the gap?","hintLine":"Count along the panel with me and clap at the empty spot. What number did we clap on?","art":{"kind":"emoji","value":"5 ▢ 7 8 9"},"options":[{"id":"6","label":"6"},{"id":"4","label":"4"},{"id":"10","label":"10"}],"answer":"6"}},{"id":"sight_word_recruit_1_58","templateKey":"sight_word","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"The password is the word \"the\". Find \"the\" on the wall and tap it.","hintLine":"\"the\". Look at the first letter of each word. Which one starts like \"the\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"go","label":"go"},{"id":"me","label":"me"},{"id":"the","label":"the"}],"answer":"the"}},{"id":"sight_word_recruit_1_59","templateKey":"sight_word","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"The password is the word \"a\". Find \"a\" on the wall and tap it.","hintLine":"\"a\". Look at the first letter of each word. Which one starts like \"a\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"I","label":"I"},{"id":"to","label":"to"},{"id":"a","label":"a"}],"answer":"a"}},{"id":"sight_word_recruit_1_60","templateKey":"sight_word","rank":"recruit","notch":1,"track":"core","payload":{"promptLine":"The password is the word \"go\". Find \"go\" on the wall and tap it.","hintLine":"\"go\". Look at the first letter of each word. Which one starts like \"go\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"go","label":"go"},{"id":"we","label":"we"},{"id":"my","label":"my"}],"answer":"go"}},{"id":"sight_word_recruit_2_61","templateKey":"sight_word","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"The password is the word \"see\". Find \"see\" on the wall and tap it.","hintLine":"\"see\". Look at the first letter of each word. Which one starts like \"see\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"me","label":"me"},{"id":"we","label":"we"},{"id":"so","label":"so"},{"id":"see","label":"see"}],"answer":"see"}},{"id":"sight_word_recruit_2_62","templateKey":"sight_word","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"The password is the word \"can\". Find \"can\" on the wall and tap it.","hintLine":"\"can\". Look at the first letter of each word. Which one starts like \"can\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"an","label":"an"},{"id":"can","label":"can"},{"id":"cat","label":"cat"},{"id":"car","label":"car"}],"answer":"can"}},{"id":"sight_word_recruit_2_63","templateKey":"sight_word","rank":"recruit","notch":2,"track":"core","payload":{"promptLine":"The password is the word \"you\". Find \"you\" on the wall and tap it.","hintLine":"\"you\". Look at the first letter of each word. Which one starts like \"you\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"out","label":"out"},{"id":"you","label":"you"},{"id":"yes","label":"yes"},{"id":"to","label":"to"}],"answer":"you"}},{"id":"sight_word_recruit_3_64","templateKey":"sight_word","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"The password is the word \"the\". Find \"the\" on the wall and tap it.","hintLine":"\"the\". Look at the first letter of each word. Which one starts like \"the\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"then","label":"then"},{"id":"she","label":"she"},{"id":"the","label":"the"},{"id":"they","label":"they"}],"answer":"the"}},{"id":"sight_word_recruit_3_65","templateKey":"sight_word","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"The password is the word \"like\". Find \"like\" on the wall and tap it.","hintLine":"\"like\". Look at the first letter of each word. Which one starts like \"like\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"little","label":"little"},{"id":"bike","label":"bike"},{"id":"like","label":"like"},{"id":"look","label":"look"}],"answer":"like"}},{"id":"sight_word_recruit_3_66","templateKey":"sight_word","rank":"recruit","notch":3,"track":"core","payload":{"promptLine":"The password is the word \"we\". Find \"we\" on the wall and tap it.","hintLine":"\"we\". Look at the first letter of each word. Which one starts like \"we\"?","art":{"kind":"emoji","value":"🗝️"},"options":[{"id":"we","label":"we"},{"id":"me","label":"me"},{"id":"be","label":"be"},{"id":"he","label":"he"}],"answer":"we"}},{"id":"alephbet_match_recruit_1_67","templateKey":"alephbet_match","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"This scroll letter is called aleph. Find the matching aleph on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"א"},"options":[{"id":"א","label":"א"},{"id":"ש","label":"ש"},{"id":"מ","label":"מ"}],"answer":"א"}},{"id":"alephbet_match_recruit_1_68","templateKey":"alephbet_match","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"This scroll letter is called shin. Find the matching shin on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"ש"},"options":[{"id":"ש","label":"ש"},{"id":"א","label":"א"},{"id":"ל","label":"ל"}],"answer":"ש"}},{"id":"alephbet_match_recruit_1_69","templateKey":"alephbet_match","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"This scroll letter is called mem. Find the matching mem on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"מ"},"options":[{"id":"מ","label":"מ"},{"id":"ש","label":"ש"},{"id":"ת","label":"ת"}],"answer":"מ"}},{"id":"alephbet_match_recruit_2_70","templateKey":"alephbet_match","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"This scroll letter is called lamed. Find the matching lamed on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"ל"},"options":[{"id":"ל","label":"ל"},{"id":"ג","label":"ג"},{"id":"נ","label":"נ"}],"answer":"ל"}},{"id":"alephbet_match_recruit_2_71","templateKey":"alephbet_match","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"This scroll letter is called tav. Find the matching tav on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"ת"},"options":[{"id":"ת","label":"ת"},{"id":"ח","label":"ח"},{"id":"ה","label":"ה"}],"answer":"ת"}},{"id":"alephbet_match_recruit_2_72","templateKey":"alephbet_match","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"This scroll letter is called gimel. Find the matching gimel on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"ג"},"options":[{"id":"ג","label":"ג"},{"id":"נ","label":"נ"},{"id":"ל","label":"ל"}],"answer":"ג"}},{"id":"alephbet_match_recruit_3_73","templateKey":"alephbet_match","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"This scroll letter is called bet. Find the matching bet on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"ב"},"options":[{"id":"ב","label":"ב"},{"id":"כ","label":"כ"},{"id":"נ","label":"נ"}],"answer":"ב"}},{"id":"alephbet_match_recruit_3_74","templateKey":"alephbet_match","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"This scroll letter is called dalet. Find the matching dalet on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"ד"},"options":[{"id":"ד","label":"ד"},{"id":"ר","label":"ר"},{"id":"ך","label":"ך"}],"answer":"ד"}},{"id":"alephbet_match_recruit_3_75","templateKey":"alephbet_match","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"This scroll letter is called hey. Find the matching hey on your keypad, Agent.","hintLine":"Look at its shape very closely. Which button is exactly the same as the scroll letter?","art":{"kind":"emoji","value":"ה"},"options":[{"id":"ה","label":"ה"},{"id":"ח","label":"ח"},{"id":"ת","label":"ת"}],"answer":"ה"}},{"id":"hebrew_sound_lock_recruit_1_76","templateKey":"hebrew_sound_lock","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says buh. Listen: buh. Tap it!","hintLine":"buh... that letter is called bet. Can you find bet?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"ב","label":"ב"},{"id":"ש","label":"ש"},{"id":"מ","label":"מ"}],"answer":"ב"}},{"id":"hebrew_sound_lock_recruit_1_77","templateKey":"hebrew_sound_lock","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says mmm. Listen: mmm. Tap it!","hintLine":"mmm... that letter is called mem. Can you find mem?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"מ","label":"מ"},{"id":"ב","label":"ב"},{"id":"ל","label":"ל"}],"answer":"מ"}},{"id":"hebrew_sound_lock_recruit_1_78","templateKey":"hebrew_sound_lock","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says shh. Listen: shh. Tap it!","hintLine":"shh... that letter is called shin. Can you find shin?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"ש","label":"ש"},{"id":"מ","label":"מ"},{"id":"ת","label":"ת"}],"answer":"ש"}},{"id":"hebrew_sound_lock_recruit_2_79","templateKey":"hebrew_sound_lock","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says lll. Listen: lll. Tap it!","hintLine":"lll... that letter is called lamed. Can you find lamed?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"ל","label":"ל"},{"id":"ר","label":"ר"},{"id":"נ","label":"נ"}],"answer":"ל"}},{"id":"hebrew_sound_lock_recruit_2_80","templateKey":"hebrew_sound_lock","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says tuh. Listen: tuh. Tap it!","hintLine":"tuh... that letter is called tav. Can you find tav?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"ת","label":"ת"},{"id":"ד","label":"ד"},{"id":"ט","label":"ט"}],"answer":"ת"}},{"id":"hebrew_sound_lock_recruit_2_81","templateKey":"hebrew_sound_lock","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says nnn. Listen: nnn. Tap it!","hintLine":"nnn... that letter is called nun. Can you find nun?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"נ","label":"נ"},{"id":"מ","label":"מ"},{"id":"ל","label":"ל"}],"answer":"נ"}},{"id":"hebrew_sound_lock_recruit_3_82","templateKey":"hebrew_sound_lock","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says duh. Listen: duh. Tap it!","hintLine":"duh... that letter is called dalet. Can you find dalet?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"ד","label":"ד"},{"id":"ת","label":"ת"},{"id":"ר","label":"ר"}],"answer":"ד"}},{"id":"hebrew_sound_lock_recruit_3_83","templateKey":"hebrew_sound_lock","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says rrr. Listen: rrr. Tap it!","hintLine":"rrr... that letter is called resh. Can you find resh?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"ר","label":"ר"},{"id":"ד","label":"ד"},{"id":"ל","label":"ל"}],"answer":"ר"}},{"id":"hebrew_sound_lock_recruit_3_84","templateKey":"hebrew_sound_lock","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"This lock opens with the scroll letter that says kuh. Listen: kuh. Tap it!","hintLine":"kuh... that letter is called kaf. Can you find kaf?","art":{"kind":"emoji","value":"📜"},"options":[{"id":"כ","label":"כ"},{"id":"ב","label":"ב"},{"id":"ג","label":"ג"}],"answer":"כ"}},{"id":"creation_count_recruit_1_85","templateKey":"creation_count","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"Day one! Count the lights God made. How many?","hintLine":"Touch each lights on the scroll and count out loud. One... two... keep going!","art":{"kind":"emoji","value":"💡","count":2},"options":[{"id":"1","label":"1"},{"id":"2","label":"2"},{"id":"3","label":"3"}],"answer":"2"}},{"id":"creation_count_recruit_1_86","templateKey":"creation_count","rank":"recruit","notch":1,"track":"scroll","payload":{"promptLine":"Day two, the waters! Count the waves on the scroll.","hintLine":"Touch each waves on the scroll and count out loud. One... two... keep going!","art":{"kind":"emoji","value":"🌊","count":3},"options":[{"id":"2","label":"2"},{"id":"3","label":"3"},{"id":"4","label":"4"}],"answer":"3"}},{"id":"creation_count_recruit_2_87","templateKey":"creation_count","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"Day three! Count the trees that grew. How many?","hintLine":"Touch each trees on the scroll and count out loud. One... two... keep going!","art":{"kind":"emoji","value":"🌳","count":5},"options":[{"id":"4","label":"4"},{"id":"5","label":"5"},{"id":"6","label":"6"},{"id":"7","label":"7"}],"answer":"5"}},{"id":"creation_count_recruit_2_88","templateKey":"creation_count","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"Day four! Count the stars in the sky. How many?","hintLine":"Touch each stars on the scroll and count out loud. One... two... keep going!","art":{"kind":"emoji","value":"⭐","count":4},"options":[{"id":"3","label":"3"},{"id":"4","label":"4"},{"id":"5","label":"5"},{"id":"6","label":"6"}],"answer":"4"}},{"id":"creation_count_recruit_2_89","templateKey":"creation_count","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"Day five! Count the fish in the sea, Agent.","hintLine":"Touch each fish on the scroll and count out loud. One... two... keep going!","art":{"kind":"emoji","value":"🐟","count":6},"options":[{"id":"5","label":"5"},{"id":"6","label":"6"},{"id":"7","label":"7"},{"id":"8","label":"8"}],"answer":"6"}},{"id":"creation_count_recruit_3_90","templateKey":"creation_count","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"Day six, the animals! Count every one on the scroll.","hintLine":"Touch each animals on the scroll and count out loud. One... two... keep going!","art":{"kind":"emoji","value":"🦁","count":7},"options":[{"id":"6","label":"6"},{"id":"7","label":"7"},{"id":"8","label":"8"},{"id":"9","label":"9"}],"answer":"7"}},{"id":"creation_count_recruit_3_91","templateKey":"creation_count","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"How many days until Shabbat rest? Count them on the scroll.","hintLine":"Touch each candles on the scroll and count out loud. One... two... keep going!","art":{"kind":"emoji","value":"🕯️","count":7},"options":[{"id":"5","label":"5"},{"id":"6","label":"6"},{"id":"7","label":"7"},{"id":"8","label":"8"}],"answer":"7"}},{"id":"gematria_recruit_2_92","templateKey":"gematria","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"Number code, Agent! In scroll code, every letter has a number. Use the legend to press the letters.","hintLine":"Find the first number in the legend. Which scroll letter does it stand for?","art":{"kind":"emoji","value":"1 2  (av — father)"},"options":[{"id":"א","label":"א"},{"id":"ב","label":"ב"}],"answer":["א","ב"],"legend":[{"symbol":"1","means":"א"},{"symbol":"2","means":"ב"}]}},{"id":"gematria_recruit_2_93","templateKey":"gematria","rank":"recruit","notch":2,"track":"scroll","payload":{"promptLine":"Number code, Agent! In scroll code, every letter has a number. Use the legend to press the letters.","hintLine":"Find the first number in the legend. Which scroll letter does it stand for?","art":{"kind":"emoji","value":"4 3  (dag — fish)"},"options":[{"id":"ב","label":"ב"},{"id":"ג","label":"ג"},{"id":"ד","label":"ד"}],"answer":["ד","ג"],"legend":[{"symbol":"2","means":"ב"},{"symbol":"3","means":"ג"},{"symbol":"4","means":"ד"}]}},{"id":"gematria_recruit_3_94","templateKey":"gematria","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"Number code, Agent! In scroll code, every letter has a number. Use the legend to press the letters.","hintLine":"Find the first number in the legend. Which scroll letter does it stand for?","art":{"kind":"emoji","value":"3 2  (gav — back)"},"options":[{"id":"א","label":"א"},{"id":"ב","label":"ב"},{"id":"ג","label":"ג"}],"answer":["ג","ב"],"legend":[{"symbol":"1","means":"א"},{"symbol":"2","means":"ב"},{"symbol":"3","means":"ג"}]}},{"id":"gematria_recruit_3_95","templateKey":"gematria","rank":"recruit","notch":3,"track":"scroll","payload":{"promptLine":"Number code, Agent! In scroll code, every letter has a number. Use the legend to press the letters.","hintLine":"Find the first number in the legend. Which scroll letter does it stand for?","art":{"kind":"emoji","value":"1 4  (ed — witness)"},"options":[{"id":"א","label":"א"},{"id":"ג","label":"ג"},{"id":"ד","label":"ד"}],"answer":["א","ד"],"legend":[{"symbol":"1","means":"א"},{"symbol":"3","means":"ג"},{"symbol":"4","means":"ד"}]}}],"missions":[{"id":"m_jam_jar","title":"The Jam Jar Job","rank":"recruit","track":"core","icon":"🫙","briefingLine":"Agent, we have a situation. Someone hid the strawberry jam in a locked cabinet — and snack time is in danger. Crack the codes and save the jam!","debriefLine":"The jam is safe, Agent. Outstanding work. Remember: never shake a jam jar near a laptop. Spymaster out!","secretMessageLine":"The secret message says: THE JAM IS IN THE TALL CUPBOARD. Mission accomplished!","gadgetRewardId":"g_flashlight","puzzleIdsByNotch":{"1":["letter_match_recruit_1_01","count_gadgets_recruit_1_29","letter_match_recruit_1_02"],"2":["letter_match_recruit_2_05","count_gadgets_recruit_2_33","letter_match_recruit_2_06"],"3":["letter_match_recruit_3_09","count_gadgets_recruit_3_37","letter_match_recruit_3_10"]}},{"id":"m_squeaky_door","title":"The Squeaky Door","rank":"recruit","track":"core","icon":"🚪","briefingLine":"Listen carefully, Agent. The squeaky door at headquarters is locked with sound codes. Only an agent with sharp ears can open it.","debriefLine":"You heard every sound perfectly, Agent. I once tried to oil that door with honey. Do not do that. Spymaster out!","secretMessageLine":"The door whispers: WELL DONE, AGENT. YOUR EARS ARE ELITE.","gadgetRewardId":"g_headset","puzzleIdsByNotch":{"1":["sound_lock_recruit_1_13","sound_lock_recruit_1_14","letter_match_recruit_1_03"],"2":["sound_lock_recruit_2_18","sound_lock_recruit_2_19","letter_match_recruit_2_07"],"3":["sound_lock_recruit_3_24","sound_lock_recruit_3_25","letter_match_recruit_3_11"]}},{"id":"m_gadget_inventory","title":"Gadget Inventory Night","rank":"recruit","track":"core","icon":"🧰","briefingLine":"Big job tonight, Agent. The gadget room is a mess and we must count everything before the inspector arrives at bedtime.","debriefLine":"Every gadget counted and shelved. The inspector is amazed. She says hello, by the way. Spymaster out!","secretMessageLine":"Inventory complete! The secret message says: YOU COUNT, THEREFORE YOU ARE... A GREAT AGENT.","gadgetRewardId":"g_magnet","puzzleIdsByNotch":{"1":["count_gadgets_recruit_1_30","missing_number_recruit_1_52","count_gadgets_recruit_1_31"],"2":["count_gadgets_recruit_2_34","missing_number_recruit_2_54","count_gadgets_recruit_2_35"],"3":["count_gadgets_recruit_3_38","missing_number_recruit_3_56","count_gadgets_recruit_3_39"]}},{"id":"m_shape_safe","title":"The Shape Safe","rank":"recruit","track":"core","icon":"🔐","briefingLine":"Agent, the old shape safe has been found! Nobody has opened it in one hundred years. The legend on the door is your only clue.","debriefLine":"One hundred years locked, and YOU opened it. Inside was... my missing sandwich. Still can not explain that. Spymaster out!","secretMessageLine":"The safe swings open! Inside, a note: SHAPES ARE JUST CODES WEARING COSTUMES.","gadgetRewardId":"g_decoder","puzzleIdsByNotch":{"1":["shape_cipher_recruit_1_40","pattern_breaker_recruit_1_46","shape_cipher_recruit_1_41"],"2":["shape_cipher_recruit_2_42","pattern_breaker_recruit_2_48","shape_cipher_recruit_2_43"],"3":["shape_cipher_recruit_3_44","pattern_breaker_recruit_3_50","shape_cipher_recruit_3_45"]}},{"id":"m_sign_in","title":"Agent, Sign In","rank":"recruit","track":"core","icon":"🪪","briefingLine":"Security upgrade, Agent! From today, headquarters only opens for agents who can code in their own name. Show the door who you are.","debriefLine":"The door knows your name now. It will probably say hello every morning. It is very friendly for a door. Spymaster out!","secretMessageLine":"ACCESS GRANTED. The computer says: WELCOME, AGENT. WE ARE PROUD OF YOU.","gadgetRewardId":"g_idscanner","puzzleIdsByNotch":{"1":["letter_match_recruit_1_04","@name_code","@name_code"],"2":["letter_match_recruit_2_08","@name_code","@name_code"],"3":["letter_match_recruit_3_12","@name_code","@name_code"]}},{"id":"m_pattern_vault","title":"The Pattern Vault","rank":"recruit","track":"core","icon":"🌀","briefingLine":"Agent, the pattern vault hums a rhythm. Everything inside it follows a pattern — crack three of them and the vault sings open.","debriefLine":"The vault sang! It was a little off-key, but we do not mention that. Beautiful pattern work, Agent. Spymaster out!","secretMessageLine":"The vault sings: PATTERNS ARE EVERYWHERE. AGENTS WHO SEE THEM SEE THE FUTURE.","gadgetRewardId":"g_compass","puzzleIdsByNotch":{"1":["pattern_breaker_recruit_1_47","missing_number_recruit_1_53","pattern_breaker_recruit_1_46"],"2":["pattern_breaker_recruit_2_49","missing_number_recruit_2_55","pattern_breaker_recruit_2_48"],"3":["pattern_breaker_recruit_3_51","missing_number_recruit_3_57","pattern_breaker_recruit_3_50"]}},{"id":"m_word_wire","title":"Word on the Wire","rank":"recruit","track":"core","icon":"📻","briefingLine":"Shh! Secret words are coming through the radio, Agent. Listen for each password and find it on the word wall. The wire is live!","debriefLine":"Every password caught! The radio is impressed. It only plays static for agents it respects. Spymaster out!","secretMessageLine":"The final transmission reads: YOU CAN READ SECRET WORDS. THAT IS A SUPERPOWER.","gadgetRewardId":"g_radio","puzzleIdsByNotch":{"1":["sight_word_recruit_1_58","sight_word_recruit_1_59","sound_lock_recruit_1_15"],"2":["sight_word_recruit_2_61","sight_word_recruit_2_62","sound_lock_recruit_2_20"],"3":["sight_word_recruit_3_64","sight_word_recruit_3_65","sound_lock_recruit_3_26"]}},{"id":"m_midnight_snack","title":"The Midnight Snack Cipher","rank":"recruit","track":"core","icon":"🍪","briefingLine":"Someone is sneaking cookies at midnight, Agent, and they leave coded notes. Tonight we decode everything and solve the Cookie Question.","debriefLine":"Case closed! The midnight snacker was... the dog. We have chosen to forgive him. Spymaster out!","secretMessageLine":"The decoded note says: THE COOKIES WERE DELICIOUS. SIGNED, A VERY GOOD DOG.","gadgetRewardId":"g_glasses","puzzleIdsByNotch":{"1":["shape_cipher_recruit_1_40","sight_word_recruit_1_60","missing_number_recruit_1_53"],"2":["shape_cipher_recruit_2_42","sight_word_recruit_2_63","missing_number_recruit_2_55"],"3":["shape_cipher_recruit_3_44","sight_word_recruit_3_66","missing_number_recruit_3_57"]}},{"id":"s_creation","title":"The Creation Scroll","rank":"recruit","track":"scroll","icon":"🌍","briefingLine":"Agent, the oldest scroll in the whole library is missing its pieces — the story of how everything began. Count your way through the days and bring it home.","debriefLine":"The Creation Scroll is back on its shelf, glowing a little. Scrolls do that when they are happy. Wonderful work, Agent.","secretMessageLine":"The scroll unrolls... In the beginning, God created the heavens and the earth.","gadgetRewardId":"g_lantern","puzzleIdsByNotch":{"1":["creation_count_recruit_1_85","creation_count_recruit_1_86","creation_count_recruit_1_85"],"2":["creation_count_recruit_2_87","creation_count_recruit_2_88","creation_count_recruit_2_89"],"3":["creation_count_recruit_3_90","creation_count_recruit_3_91","creation_count_recruit_3_90"]}},{"id":"s_shema","title":"The Shema Scroll","rank":"recruit","track":"scroll","icon":"📜","briefingLine":"This scroll holds the most important words in the library, Agent. Its letters are scattered — find each scroll letter and the words come home.","debriefLine":"The great words are safe again. The whole library feels quieter now, in a good way. Thank you, Agent.","secretMessageLine":"The scroll unrolls... Shema Yisrael, Adonai Eloheinu, Adonai Echad. Hear, O Israel: the LORD our God, the LORD is one.","gadgetRewardId":"g_scrollcase","puzzleIdsByNotch":{"1":["alephbet_match_recruit_1_67","alephbet_match_recruit_1_68","hebrew_sound_lock_recruit_1_76"],"2":["alephbet_match_recruit_2_70","alephbet_match_recruit_2_71","hebrew_sound_lock_recruit_2_79"],"3":["alephbet_match_recruit_3_73","alephbet_match_recruit_3_74","hebrew_sound_lock_recruit_3_82"]}},{"id":"s_light","title":"The Light Mission","rank":"recruit","track":"scroll","icon":"🕯️","briefingLine":"The lamps in the scroll library have gone dark, Agent. Crack the codes to light each one, and find the message hiding in the light.","debriefLine":"Every lamp is burning bright, and the library is golden. You did that, Agent. Sleep well tonight.","secretMessageLine":"The lamps flicker and spell it out... You are the light of the world.","gadgetRewardId":"g_candle","puzzleIdsByNotch":{"1":["hebrew_sound_lock_recruit_1_77","gematria_recruit_2_92","alephbet_match_recruit_1_69"],"2":["hebrew_sound_lock_recruit_2_80","gematria_recruit_2_92","alephbet_match_recruit_2_72"],"3":["hebrew_sound_lock_recruit_3_83","gematria_recruit_3_94","alephbet_match_recruit_3_75"]}}],"gadgets":[{"id":"g_flashlight","name":"Night-Vision Flashlight","emoji":"🔦","tapLine":"Click! Now you can see in the dark. Probably."},{"id":"g_headset","name":"Super-Ears Headset","emoji":"🎧","tapLine":"Shhh... I can hear a snail sneezing three houses away."},{"id":"g_magnet","name":"Mega Magnet","emoji":"🧲","tapLine":"Boing! Please keep away from the refrigerator door."},{"id":"g_decoder","name":"Decoder Wheel","emoji":"🛞","tapLine":"Spin spin spin... every code fears the wheel."},{"id":"g_idscanner","name":"ID Scanner","emoji":"🪪","tapLine":"Beep! Identity confirmed: one hundred percent awesome agent."},{"id":"g_compass","name":"Pattern Compass","emoji":"🧭","tapLine":"The needle points to... snack time. Every time."},{"id":"g_radio","name":"Whisper Radio","emoji":"📻","tapLine":"Krrrrshh... this is headquarters... you are doing great... krrrshh."},{"id":"g_glasses","name":"X-Ray Spy Glasses","emoji":"🕶️","tapLine":"Whoa. I can see... exactly what I saw before, but cooler."},{"id":"g_lantern","name":"Library Lantern","emoji":"🏮","tapLine":"A warm little light for reading very old scrolls."},{"id":"g_scrollcase","name":"Golden Scroll Case","emoji":"📜","tapLine":"The safest place in the world for the greatest words."},{"id":"g_candle","name":"Everbright Candle","emoji":"🕯️","tapLine":"This one never blows out. Not even on birthdays."}],"badges":[{"id":"b_first_mission","name":"First Mission","emoji":"🥇","description":"Completed a first mission."},{"id":"b_three_missions","name":"Triple Agent","emoji":"🎖️","description":"Completed three missions."},{"id":"b_all_recruit","name":"Recruit Star","emoji":"⭐","description":"Completed every Recruit mission."},{"id":"b_sharp_ears","name":"Sharp Ears","emoji":"👂","description":"Cracked five sound locks on the first try."},{"id":"b_first_scroll","name":"Scroll Finder","emoji":"📜","description":"Recovered a first scroll."},{"id":"b_promotion","name":"Promoted!","emoji":"🏅","description":"Earned a promotion to a new rank."},{"id":"b_daily_streak","name":"Daily Agent","emoji":"📅","description":"Completed a daily mission."}],"lines":{"wrongTap":["Hmm, not that one, Agent.","Close! Try another button.","Not quite. Steady hands, Agent."],"correctTap":["Yes! That is it!","Cracked it!","Outstanding, Agent!","You got it!"],"glowNudge":"Watch the glowing button, Agent. That is the one!","vaultOpening":"The vault is opening...","missionComplete":"Mission accomplished, Agent!","welcomeHQ":"Welcome to headquarters, Agent. Pick a door!","promotion":"Attention! By the power of Spy Academy, you are hereby promoted. Stand tall, Agent. We are so proud of you.","parentMessageIncoming":"Special transmission incoming... this one is just for you.","sequenceProgress":"Keep going...","sessionDone":"That is all the missions for now, Agent. Headquarters will call you tomorrow!"}};
+
+/* =============================== state =============================== */
+
+const AVATARS = [
+  { id: "fox", emoji: "🦊" }, { id: "owl", emoji: "🦉" }, { id: "panda", emoji: "🐼" },
+  { id: "bunny", emoji: "🐰" }, { id: "dino", emoji: "🦖" }, { id: "cat", emoji: "🐱" },
+];
+const RANK_LABELS = { recruit: "Recruit", junior: "Junior Agent", special: "Special Agent" };
+const RANK_ORDER = ["recruit", "junior", "special"];
+
+const store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem("la." + key); return v ? JSON.parse(v) : fallback; }
+    catch { return fallback; }
+  },
+  set(key, value) { try { localStorage.setItem("la." + key, JSON.stringify(value)); } catch {} },
+};
+
+const listProfiles = () => store.get("profiles", []);
+const saveProfiles = (ps) => store.set("profiles", ps);
+
+function defaultState() {
+  return {
+    rank: "recruit", notch: 1,
+    scrollRoom: false, missionsPerSession: 0, difficultyLocked: false,
+    adaptive: { streak: 0, notch3Streak: 0 },
+    progress: {}, gadgets: [], badges: [],
+  };
+}
+const stateFor = (pid) => ({ ...defaultState(), ...store.get("state." + pid, {}) });
+const saveState = (pid, s) => store.set("state." + pid, s);
+
+/* =============================== audio =============================== */
+
+let wrongIdx = 0, correctIdx = 0;
+function say(line) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(line);
+    u.rate = 0.92;
+    u.lang = "en-US";
+    speechSynthesis.speak(u);
+  } catch {}
+}
+const hush = () => { try { speechSynthesis.cancel(); } catch {} };
+
+let audioCtx = null;
+function blip(kind) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime;
+    const make = (freq, start, dur, gainV) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t + start);
+      g.gain.linearRampToValueAtTime(gainV, t + start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t + start); o.stop(t + start + dur + 0.05);
+    };
+    if (kind === "right") { make(660, 0, 0.16, 0.18); make(880, 0.13, 0.22, 0.18); }
+    else if (kind === "tick") { make(740, 0, 0.1, 0.12); }
+    else { make(180, 0, 0.25, 0.2); }
+  } catch {}
+}
+
+/* ============================ game logic ============================ */
+
+const puzzleById = (id) => CONTENT.puzzles.find((p) => p.id === id);
+const templateByKey = (k) => CONTENT.templates.find((t) => t.key === k);
+const gadgetById = (id) => CONTENT.gadgets.find((g) => g.id === id);
+const badgeById = (id) => CONTENT.badges.find((b) => b.id === id);
+const missionsFor = (rank, track) => CONTENT.missions.filter((m) => m.rank === rank && m.track === track);
+
+function makeNameCodePuzzle(profile, st, variant) {
+  const name = (profile.name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 8)) || "AGENT";
+  const letters = name.split("");
+  const support = Math.max(1, st.notch + (variant > 0 ? 1 : 0));
+  const pool = "BDGKMOPRSTW".split("").filter((c) => !letters.includes(c));
+  const keypad = [...new Set([...letters, ...pool.slice(0, Math.min(3, 2 + st.notch))])].sort();
+  const art =
+    support === 1 ? { kind: "emoji", value: name }
+    : support === 2 ? { kind: "emoji", value: letters[0] + " " + "▢ ".repeat(letters.length - 1).trim() }
+    : { kind: "emoji", value: "🪪" };
+  return {
+    id: "@name_code_" + variant,
+    templateKey: "name_code", rank: st.rank, notch: st.notch, track: "core",
+    payload: {
+      promptLine: "Agent " + profile.name + ", code in your name. Press your letters in order!",
+      hintLine: "Your name starts with " + letters[0] + ". Say your name slowly and listen for each letter.",
+      art,
+      options: keypad.map((l) => ({ id: l, label: l })),
+      answer: letters,
+    },
+  };
+}
+
+function resolveMissionPuzzles(mission, profile, st) {
+  let n = 0;
+  return mission.puzzleIdsByNotch[st.notch].map((id) =>
+    id === "@name_code" ? makeNameCodePuzzle(profile, st, n++) : puzzleById(id),
+  );
+}
+
+function hashString(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const todayKey = () => {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+};
+
+function makeDailyMission(profile, st) {
+  const day = todayKey();
+  let seed = hashString(day + ":" + profile.id);
+  const seen = new Set();
+  const pool = [];
+  for (const notch of [st.notch, 2, 1]) {
+    for (const p of CONTENT.puzzles) {
+      if (p.rank === st.rank && p.track === "core" && p.notch === notch && !seen.has(p.id)) {
+        seen.add(p.id); pool.push(p);
+      }
+    }
+  }
+  for (let i = pool.length - 1; i > 0; i--) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const j = seed % (i + 1);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const ids = pool.slice(0, 3).map((p) => p.id);
+  return {
+    id: "daily_" + day, title: "Daily Drop", rank: st.rank, track: "core", icon: "📬",
+    briefingLine: "Fresh orders just arrived, Agent! A brand new drop, today only. Ready for it?",
+    debriefLine: "Daily drop complete. Same time tomorrow, Agent — headquarters never sleeps. Well, it naps. Spymaster out!",
+    secretMessageLine: "Today's secret message: EVERY DAY YOU PRACTICE, YOUR AGENT POWERS GROW.",
+    gadgetRewardId: "g_radio",
+    puzzleIdsByNotch: { 1: ids, 2: ids, 3: ids },
+  };
+}
+
+/* Adaptive rules, identical to the app: 3 first-tries in a row raise the
+   notch, two glow stages in one mission lower it, clean notch-3 twice in a
+   row promotes. Never shown to the child except the ceremony. */
+function applyMissionResults(st, results) {
+  const playedAtNotch = st.notch;
+  let promotedTo = null;
+  const glows = results.filter((r) => r.glowed).length;
+
+  if (!st.difficultyLocked) {
+    for (const r of results) {
+      st.adaptive.streak = r.firstTry ? st.adaptive.streak + 1 : 0;
+      if (st.adaptive.streak >= 3 && st.notch < 3) { st.notch += 1; st.adaptive.streak = 0; }
+    }
+    if (glows >= 2 && st.notch > 1) { st.notch -= 1; st.adaptive.streak = 0; }
+  }
+
+  if (playedAtNotch === 3 && st.notch === 3 && glows === 0) st.adaptive.notch3Streak += 1;
+  else st.adaptive.notch3Streak = 0;
+
+  const ri = RANK_ORDER.indexOf(st.rank);
+  if (st.adaptive.notch3Streak >= 2 && ri < RANK_ORDER.length - 1) {
+    promotedTo = RANK_ORDER[ri + 1];
+    st.rank = promotedTo;
+    st.adaptive.notch3Streak = 0;
+    st.adaptive.streak = 0;
+    st.notch = 1;
+  }
+  return promotedTo;
+}
+
+const stampsFor = (results) => Math.max(1, 3 - results.filter((r) => r.glowed).length);
+
+function completeMission(profile, st, mission, results) {
+  const stamps = stampsFor(results);
+  const prev = st.progress[mission.id];
+  st.progress[mission.id] = { stamps: Math.max(stamps, prev ? prev.stamps : 0), at: Date.now() };
+  if (!st.gadgets.includes(mission.gadgetRewardId)) st.gadgets.push(mission.gadgetRewardId);
+
+  const promotedTo = applyMissionResults(st, results);
+
+  const newBadges = [];
+  const award = (id, cond) => {
+    if (cond && !st.badges.includes(id)) { st.badges.push(id); newBadges.push(id); }
+  };
+  const total = Object.keys(st.progress).length;
+  award("b_first_mission", total >= 1);
+  award("b_three_missions", total >= 3);
+  award("b_first_scroll", mission.track === "scroll");
+  award("b_daily_streak", mission.id.startsWith("daily_"));
+  award("b_promotion", promotedTo !== null);
+  award("b_sharp_ears", mission.id === "m_squeaky_door" && results.every((r) => r.firstTry));
+  award("b_all_recruit", missionsFor("recruit", "core").every((m) => st.progress[m.id]));
+
+  saveState(profile.id, st);
+  return { stamps, promotedTo, newBadges };
+}
+
+/* =============================== views =============================== */
+
+const app = document.getElementById("app");
+let current = { profile: null, st: null, missionsThisSession: 0 };
+
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const avatarFor = (id) => AVATARS.find((a) => a.id === id) || AVATARS[0];
+
+function render(html, opts = {}) {
+  app.classList.toggle("scroll-world", !!opts.scrollWorld);
+  app.innerHTML = html;
+}
+
+function header(title, onBackName) {
+  return '<div class="header">'
+    + (onBackName ? '<button class="back-btn" data-act="' + onBackName + '" aria-label="Back">◀️</button>' : '<span class="header-spacer"></span>')
+    + '<div class="header-title">' + esc(title || "") + "</div>"
+    + '<span class="header-spacer"></span></div>';
+}
+
+/* ---------- profile select ---------- */
+
+function showProfileSelect(addingNow) {
+  const profiles = listProfiles();
+  const adding = addingNow || profiles.length === 0;
+  render(
+    '<div class="body">'
+    + '<div class="brand">🕵️ Spy Academy</div>'
+    + '<div class="brand-sub">Who is reporting for duty?</div>'
+    + '<div class="tile-grid">'
+    + profiles.map((p) =>
+        '<button class="avatar-tile" data-enter="' + p.id + '"><span class="face">' + avatarFor(p.avatarId).emoji + '</span><span class="name">' + esc(p.name) + "</span></button>"
+      ).join("")
+    + (!adding && profiles.length < 6 ? '<button class="avatar-tile add" data-act="add"><span class="face">➕</span><span class="name">New Agent</span></button>' : "")
+    + "</div>"
+    + (adding
+      ? '<div class="new-agent-form">'
+        + "<label>New agent's name (a grown-up types this once):</label>"
+        + '<input id="new-name" maxlength="12" placeholder="Agent name" autocomplete="off">'
+        + '<div class="avatar-pick-row">'
+        + AVATARS.map((a, i) => '<button class="avatar-pick' + (i === 0 ? " picked" : "") + '" data-avatar="' + a.id + '">' + a.emoji + "</button>").join("")
+        + "</div>"
+        + '<button class="big-btn" data-act="create">🎖️ Join the Academy</button>'
+        + "</div>"
+      : "")
+    + "</div>",
+  );
+
+  let pickedAvatar = AVATARS[0].id;
+  app.querySelectorAll("[data-avatar]").forEach((b) =>
+    b.addEventListener("click", () => {
+      pickedAvatar = b.dataset.avatar;
+      app.querySelectorAll("[data-avatar]").forEach((x) => x.classList.toggle("picked", x === b));
+    }),
+  );
+  app.querySelectorAll("[data-enter]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const p = listProfiles().find((x) => x.id === b.dataset.enter);
+      current.profile = p;
+      current.st = stateFor(p.id);
+      current.missionsThisSession = 0;
+      say("Agent " + p.name + ", welcome back to headquarters!");
+      showHQ();
+    }),
+  );
+  const addBtn = app.querySelector('[data-act="add"]');
+  if (addBtn) addBtn.addEventListener("click", () => showProfileSelect(true));
+  const createBtn = app.querySelector('[data-act="create"]');
+  if (createBtn) createBtn.addEventListener("click", () => {
+    const name = app.querySelector("#new-name").value.trim();
+    if (!name) return;
+    const p = { id: Date.now().toString(36), name, avatarId: pickedAvatar };
+    saveProfiles([...listProfiles(), p]);
+    showProfileSelect();
+  });
+}
+
+/* ---------- HQ ---------- */
+
+function showHQ() {
+  const p = current.profile, st = current.st;
+  render(
+    header("", "toProfiles")
+    + '<div class="body">'
+    + '<div class="desk"><span class="spy">🕵️</span><div><div class="agent">Agent ' + esc(p.name) + '</div><div class="rank">' + RANK_LABELS[st.rank] + "</div></div></div>"
+    + '<div class="doors">'
+    + door("missions", "🗺️", "Missions", "var(--gold)")
+    + door("locker", "🧰", "Gadget Locker", "var(--sky)")
+    + door("badges", "🏅", "Badge Wall", "var(--mint)")
+    + (st.scrollRoom ? door("scroll", "📜", "Scroll Room", "var(--parchment)") : "")
+    + "</div>"
+    + '<div class="hq-footer"><button class="gate-btn" id="gate" aria-label="Parent area (hold three seconds)">👤</button></div>'
+    + "</div>",
+  );
+  say(CONTENT.lines.welcomeHQ);
+
+  app.querySelector('[data-act="toProfiles"]').addEventListener("click", () => { hush(); showProfileSelect(); });
+  app.querySelector('[data-door="missions"]').addEventListener("click", () => showMap("core"));
+  app.querySelector('[data-door="locker"]').addEventListener("click", showLocker);
+  app.querySelector('[data-door="badges"]').addEventListener("click", showBadges);
+  const scrollDoor = app.querySelector('[data-door="scroll"]');
+  if (scrollDoor) scrollDoor.addEventListener("click", () => showMap("scroll"));
+
+  const gate = app.querySelector("#gate");
+  let holdT = null;
+  const start = (e) => {
+    e.preventDefault();
+    gate.classList.add("holding");
+    holdT = setTimeout(() => { gate.classList.remove("holding"); showParentChallenge(); }, 3000);
+  };
+  const stop = () => { gate.classList.remove("holding"); if (holdT) clearTimeout(holdT); holdT = null; };
+  gate.addEventListener("pointerdown", start);
+  gate.addEventListener("pointerup", stop);
+  gate.addEventListener("pointerleave", stop);
+}
+
+const door = (id, icon, label, color) =>
+  '<button class="door" data-door="' + id + '" style="border-color:' + color + '"><span class="icon">' + icon + '</span><span class="label">' + label + "</span></button>";
+
+/* ---------- parent gate ---------- */
+
+function showParentChallenge() {
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.innerHTML =
+    '<div class="modal-card"><h3>Grown-ups only: 6 × 4 = ?</h3><p class="modal-wrong" style="visibility:hidden">Not quite — try again.</p>'
+    + '<div class="answer-row">' + [18, 24, 32].map((n) => '<button class="answer-btn" data-n="' + n + '">' + n + "</button>").join("") + "</div>"
+    + '<button class="modal-cancel">Cancel</button></div>';
+  app.appendChild(wrap);
+  wrap.querySelector(".modal-cancel").addEventListener("click", () => wrap.remove());
+  wrap.querySelectorAll(".answer-btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (b.dataset.n === "24") { wrap.remove(); showParentArea(); }
+      else wrap.querySelector(".modal-wrong").style.visibility = "visible";
+    }),
+  );
+}
+
+function showParentArea() {
+  const p = current.profile, st = current.st;
+  const done = Object.keys(st.progress).length;
+  const scrollDone = CONTENT.missions.filter((m) => m.track === "scroll" && st.progress[m.id]).length;
+  render(
+    header("Parent Area", "toHQ")
+    + '<div class="body">'
+    + '<div class="parent-section"><h3>' + esc(p.name) + "'s progress</h3>"
+    + "<p>" + esc(p.name) + " is a " + RANK_LABELS[st.rank] + " working at level " + st.notch + " of 3"
+    + (st.difficultyLocked ? " (held there by you)" : " (adjusting automatically)") + ".</p>"
+    + "<p>Missions completed: " + done + (st.scrollRoom ? " — including " + scrollDone + " scroll " + (scrollDone === 1 ? "mission" : "missions") + "." : ".") + "</p>"
+    + '<p class="soft">The game quietly raises the level after three first-try answers in a row, and lowers it if a mission needed two glowing hints. ' + esc(p.name) + " only ever sees the promotion ceremony.</p></div>"
+
+    + '<div class="parent-section"><h3>Scroll Room</h3><div class="switch-row"><p>Unlock the Scroll Room (scroll missions with Hebrew letters and a verse as each reward)</p>'
+    + '<button class="switch' + (st.scrollRoom ? " on" : "") + '" id="sw-scroll" role="switch" aria-checked="' + st.scrollRoom + '"></button></div></div>'
+
+    + '<div class="parent-section"><h3>Missions per session</h3><div class="choice-row">'
+    + [0, 1, 2, 3].map((n) => '<button class="choice' + (st.missionsPerSession === n ? " on" : "") + '" data-limit="' + n + '">' + (n === 0 ? "No limit" : n) + "</button>").join("")
+    + "</div></div>"
+
+    + '<div class="parent-section"><h3>Difficulty override</h3><div class="switch-row"><p>Hold the level steady (stop automatic adjustment)</p>'
+    + '<button class="switch' + (st.difficultyLocked ? " on" : "") + '" id="sw-lock" role="switch" aria-checked="' + st.difficultyLocked + '"></button></div>'
+    + '<div class="choice-row">' + [1, 2, 3].map((n) => '<button class="choice' + (st.notch === n ? " on" : "") + '" data-notch="' + n + '">Level ' + n + "</button>").join("") + "</div></div>"
+
+    + '<div class="parent-section"><h3>Secret voice messages</h3><p class="soft">Recording a message in your own voice (played as a “secret transmission” after a mission) is available in the phone app version — browsers in this preview keep the microphone off.</p></div>'
+    + "</div>",
+  );
+  app.querySelector('[data-act="toHQ"]').addEventListener("click", showHQ);
+  const save = () => saveState(p.id, st);
+  app.querySelector("#sw-scroll").addEventListener("click", () => { st.scrollRoom = !st.scrollRoom; save(); showParentArea(); });
+  app.querySelector("#sw-lock").addEventListener("click", () => { st.difficultyLocked = !st.difficultyLocked; save(); showParentArea(); });
+  app.querySelectorAll("[data-limit]").forEach((b) => b.addEventListener("click", () => { st.missionsPerSession = +b.dataset.limit; save(); showParentArea(); }));
+  app.querySelectorAll("[data-notch]").forEach((b) => b.addEventListener("click", () => { st.notch = +b.dataset.notch; save(); showParentArea(); }));
+}
+
+/* ---------- mission map ---------- */
+
+function showMap(track) {
+  const p = current.profile, st = current.st;
+  const missions = missionsFor(st.rank, track);
+  const limitHit = st.missionsPerSession > 0 && current.missionsThisSession >= st.missionsPerSession;
+
+  let unlocked = true;
+  const nodes = missions.map((m) => {
+    const row = st.progress[m.id];
+    if (row) return { m, status: "done", stamps: row.stamps };
+    const status = unlocked ? "open" : "locked";
+    unlocked = false;
+    return { m, status, stamps: 0 };
+  });
+  if (track === "core") {
+    const daily = makeDailyMission(p, st);
+    const row = st.progress[daily.id];
+    nodes.push({ m: daily, status: row ? "done" : "open", stamps: row ? row.stamps : 0, daily: true });
+  }
+
+  render(
+    header(track === "scroll" ? "📜 Scroll Room" : "🗺️ Missions", "toHQ")
+    + '<div class="body"><div class="map-path">'
+    + (limitHit ? '<div class="limit-banner">🌙 All missions done for now. See you next time, Agent!</div>' : "")
+    + nodes.map((n, i) =>
+        '<div class="map-row ' + (i % 2 ? "right" : "left") + '">'
+        + '<button class="node ' + (n.status === "done" ? "done" : n.status === "locked" ? "locked" : "pulse")
+        + (n.daily ? " daily" : "") + '"' + (limitHit ? ' style="opacity:0.45"' : "") + ' data-node="' + i + '">'
+        + '<span class="icon">' + (n.status === "locked" ? "🔒" : n.m.icon) + "</span>"
+        + '<span class="title">' + esc(n.m.title) + "</span>"
+        + (n.status === "done" ? '<span class="stamps">' + "⭐".repeat(n.stamps) + "</span>" : "")
+        + (n.daily && n.status !== "done" ? '<span class="daily-tag">TODAY</span>' : "")
+        + "</button></div>"
+      ).join("")
+    + "</div></div>",
+    { scrollWorld: track === "scroll" },
+  );
+  app.querySelector('[data-act="toHQ"]').addEventListener("click", () => { hush(); showHQ(); });
+  app.querySelectorAll("[data-node]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const n = nodes[+b.dataset.node];
+      if (n.status === "locked") { say("That door is still locked, Agent. Finish the missions before it!"); return; }
+      if (limitHit) { say(CONTENT.lines.sessionDone); return; }
+      showBriefing(n.m);
+    }),
+  );
+}
+
+/* ---------- briefing ---------- */
+
+function showBriefing(mission) {
+  render(
+    header(mission.title, "toMap")
+    + '<div class="body">'
+    + '<div class="scene"><span class="hero">' + mission.icon + "</span></div>"
+    + '<div class="prompt-row"><button class="spy-face" id="replay">🕵️</button><div class="prompt-caption">Tap the Spymaster to hear the briefing again</div></div>'
+    + '<button class="big-btn" id="accept">🫡 Accept Mission</button>'
+    + "</div>",
+    { scrollWorld: mission.track === "scroll" },
+  );
+  say(mission.briefingLine);
+  app.querySelector('[data-act="toMap"]').addEventListener("click", () => { hush(); showMap(mission.track); });
+  app.querySelector("#replay").addEventListener("click", () => say(mission.briefingLine));
+  app.querySelector("#accept").addEventListener("click", () => { hush(); startMission(mission); });
+}
+
+/* ---------- code stage ---------- */
+
+function startMission(mission) {
+  const puzzles = resolveMissionPuzzles(mission, current.profile, current.st);
+  runStage(mission, puzzles, 0, []);
+}
+
+function runStage(mission, puzzles, stageIndex, results) {
+  const puzzle = puzzles[stageIndex];
+  const payload = puzzle.payload;
+  const template = templateByKey(puzzle.templateKey);
+  const answerSeq = Array.isArray(payload.answer) ? payload.answer : [payload.answer];
+  const isScroll = mission.track === "scroll";
+  const isHebrew = puzzle.templateKey.indexOf("aleph") === 0 || puzzle.templateKey.indexOf("hebrew") === 0 || puzzle.templateKey === "gematria";
+
+  let misses = 0, seqPos = 0, everGlowed = false, clean = true, solved = false;
+
+  const artHtml = payload.art
+    ? (payload.art.count
+        ? '<div class="count-grid">' + Array.from({ length: payload.art.count }, () => "<span>" + payload.art.value + "</span>").join("") + "</div>"
+        : '<div class="art-big">' + esc(payload.art.value) + "</div>")
+    : "";
+  const legendHtml = payload.legend
+    ? '<div class="legend">' + payload.legend.map((l) => "<span>" + esc(l.symbol) + " = " + esc(l.means) + "</span>").join("") + "</div>"
+    : "";
+  const seqHtml = template.mode === "sequence"
+    ? '<div class="seq-row">' + answerSeq.map(() => '<div class="seq-box"></div>').join("") + "</div>"
+    : "";
+
+  render(
+    header(mission.title, "quit")
+    + '<div class="body">'
+    + '<div class="pips">' + puzzles.map((_, i) =>
+        '<span class="pip' + (i < stageIndex ? " done" : i === stageIndex ? " now" : "") + '"></span>').join("") + "</div>"
+    + '<div class="scene">' + artHtml + legendHtml + seqHtml + "</div>"
+    + '<div class="prompt-row"><button class="spy-face" id="replay">🕵️</button><div class="prompt-caption">Tap the Spymaster to hear it again</div></div>'
+    + '<div class="options">'
+    + payload.options.map((o, i) =>
+        '<button class="tile' + (puzzle.templateKey === "sight_word" ? " word" : "") + (isHebrew ? " hebrew" : "") + '" data-opt="' + i + '">'
+        + (o.emoji ? '<span class="mini">' + o.emoji + "</span>" : "")
+        + esc(o.label) + "</button>").join("")
+    + "</div></div>",
+    { scrollWorld: isScroll },
+  );
+
+  say(payload.promptLine);
+
+  app.querySelector('[data-act="quit"]').addEventListener("click", () => { hush(); showHQ(); });
+  app.querySelector("#replay").addEventListener("click", () => say(payload.promptLine));
+
+  const tiles = [...app.querySelectorAll("[data-opt]")];
+  const seqBoxes = [...app.querySelectorAll(".seq-box")];
+
+  const setGlow = () => {
+    const expected = answerSeq[seqPos];
+    tiles.forEach((t) => {
+      const o = payload.options[+t.dataset.opt];
+      t.classList.toggle("glow", o.id === expected);
+    });
+  };
+
+  tiles.forEach((t) =>
+    t.addEventListener("click", () => {
+      if (solved) return;
+      const o = payload.options[+t.dataset.opt];
+      const expected = answerSeq[seqPos];
+
+      if (o.id !== expected) {
+        clean = false;
+        misses += 1;
+        blip("wrong");
+        t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
+        if (misses === 1) say(nextWrong());
+        else if (misses === 2) say(payload.hintLine);
+        else { everGlowed = true; say(CONTENT.lines.glowNudge); setGlow(); }
+        return;
+      }
+
+      // right tap
+      tiles.forEach((x) => x.classList.remove("glow"));
+      if (seqPos + 1 < answerSeq.length) {
+        blip("tick");
+        seqBoxes[seqPos].classList.add("done");
+        seqBoxes[seqPos].textContent = o.label;
+        seqPos += 1;
+        misses = 0;
+        if (everGlowed) setGlow();
+        return;
+      }
+
+      solved = true;
+      blip("right");
+      if (seqBoxes[seqPos]) { seqBoxes[seqPos].classList.add("done"); seqBoxes[seqPos].textContent = o.label; }
+      t.classList.add("right");
+      say(nextCorrect());
+      const flash = document.createElement("div");
+      flash.className = "check-flash";
+      flash.textContent = "✅";
+      app.appendChild(flash);
+
+      const result = { firstTry: clean && !everGlowed, glowed: everGlowed };
+      setTimeout(() => {
+        const all = [...results, result];
+        if (stageIndex + 1 < puzzles.length) runStage(mission, puzzles, stageIndex + 1, all);
+        else showUnlock(mission, all);
+      }, 1100);
+    }),
+  );
+}
+
+const nextWrong = () => CONTENT.lines.wrongTap[wrongIdx++ % CONTENT.lines.wrongTap.length];
+const nextCorrect = () => CONTENT.lines.correctTap[correctIdx++ % CONTENT.lines.correctTap.length];
+
+/* ---------- unlock ---------- */
+
+function showUnlock(mission, results) {
+  const isScroll = mission.track === "scroll";
+  const outcome = completeMission(current.profile, current.st, mission, results);
+  current.missionsThisSession += 1;
+
+  render(
+    '<div class="body">'
+    + '<div class="vault opening" id="vault"><div class="vault-frame">'
+    + '<div class="vault-door l"></div><div class="vault-door r"></div>'
+    + '<div class="vault-wheel">' + (isScroll ? "📜" : "🛞") + "</div>"
+    + "</div></div>"
+    + '<div id="after" style="display:none; flex:1; display:none; flex-direction:column;">'
+    + '<div class="secret-card' + (isScroll ? " scroll" : "") + '">'
+    + '<div class="emblem">' + (isScroll ? "📜" : "💌") + "</div>"
+    + '<div class="msg">' + esc(mission.secretMessageLine) + "</div></div>"
+    + '<button class="big-btn" id="next" style="margin-top:18px">🫡 Report to the Spymaster</button>'
+    + "</div></div>",
+    { scrollWorld: isScroll },
+  );
+
+  say(CONTENT.lines.vaultOpening);
+
+  setTimeout(() => {
+    app.querySelector("#vault").style.display = "none";
+    const after = app.querySelector("#after");
+    after.style.display = "flex";
+    confetti();
+    say(mission.secretMessageLine);
+    app.querySelector("#next").addEventListener("click", () => { hush(); showDebrief(mission, results, outcome); });
+  }, 2400);
+}
+
+function confetti() {
+  const bits = ["🎉", "⭐", "✨", "🎊", "💛", "💙"];
+  for (let i = 0; i < 22; i++) {
+    const el = document.createElement("span");
+    el.className = "confetti-bit";
+    el.textContent = bits[i % bits.length];
+    el.style.left = ((i * 137) % 100) + "%";
+    el.style.animationDuration = (2.2 + (i % 5) * 0.35) + "s";
+    el.style.animationDelay = ((i % 7) * 0.12) + "s";
+    app.appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+}
+
+/* ---------- debrief ---------- */
+
+function showDebrief(mission, results, outcome) {
+  const gadget = gadgetById(mission.gadgetRewardId);
+
+  if (outcome.promotedTo) {
+    render(
+      '<div class="body"><div class="debrief">'
+      + '<div class="ceremony-medal">🎖️</div>'
+      + '<div class="ceremony">PROMOTED!</div>'
+      + '<div class="ceremony-rank">' + RANK_LABELS[outcome.promotedTo] + "</div>"
+      + '<button class="big-btn" id="onward">🫡 Stand tall, Agent</button>'
+      + "</div></div>",
+    );
+    say(CONTENT.lines.promotion);
+    app.querySelector("#onward").addEventListener("click", () => {
+      showDebrief(mission, results, { ...outcome, promotedTo: null });
+    });
+    return;
+  }
+
+  render(
+    '<div class="body"><div class="debrief">'
+    + "<h2>Mission Accomplished!</h2>"
+    + '<div class="stars">' + "⭐".repeat(outcome.stamps) + "</div>"
+    + '<div class="reward-card"><div class="icon">' + gadget.emoji + '</div><div class="name">New gadget: ' + esc(gadget.name) + "</div></div>"
+    + (outcome.newBadges.length
+        ? '<div class="badge-chips">' + outcome.newBadges.map((id) => { const b = badgeById(id); return '<span class="badge-chip">' + b.emoji + " " + esc(b.name) + "</span>"; }).join("") + "</div>"
+        : "")
+    + '<button class="big-btn" id="home">🏠 Back to HQ</button>'
+    + "</div></div>",
+  );
+  say(mission.debriefLine);
+  app.querySelector("#home").addEventListener("click", () => { hush(); showHQ(); });
+}
+
+/* ---------- locker & badges ---------- */
+
+function showLocker() {
+  const st = current.st;
+  render(
+    header("🧰 Gadget Locker", "toHQ")
+    + '<div class="body"><div class="locker-grid">'
+    + CONTENT.gadgets.map((g) =>
+        st.gadgets.includes(g.id)
+          ? '<button class="gadget" data-g="' + g.id + '"><span class="icon">' + g.emoji + '</span><span class="name">' + esc(g.name) + "</span></button>"
+          : '<div class="gadget locked"><span class="icon">❓</span></div>'
+      ).join("")
+    + "</div></div>",
+  );
+  app.querySelector('[data-act="toHQ"]').addEventListener("click", () => { hush(); showHQ(); });
+  app.querySelectorAll("[data-g]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const g = gadgetById(b.dataset.g);
+      say(g.tapLine);
+      b.classList.remove("wiggle"); void b.offsetWidth; b.classList.add("wiggle");
+    }),
+  );
+}
+
+function showBadges() {
+  const p = current.profile, st = current.st;
+  const done = Object.keys(st.progress).length;
+  render(
+    header("🏅 Badge Wall", "toHQ")
+    + '<div class="body">'
+    + '<div class="id-card"><div class="eyebrow">SPY ACADEMY · AGENT ID</div>'
+    + '<div class="row"><span class="avatar">' + avatarFor(p.avatarId).emoji + "</span>"
+    + '<div><div class="name">' + esc(p.name) + '</div><div class="rank">' + RANK_LABELS[st.rank] + "</div>"
+    + '<div class="meta">Missions: ' + done + "&nbsp; " + "⭐".repeat(Math.min(5, done)) + "</div></div></div></div>"
+    + '<div class="badge-wall">'
+    + CONTENT.badges.map((b) => {
+        const has = st.badges.includes(b.id);
+        return '<div class="badge-slot' + (has ? "" : " locked") + '"><div class="icon">' + (has ? b.emoji : "🔒") + '</div><div class="name">' + esc(b.name) + "</div></div>";
+      }).join("")
+    + "</div></div>",
+  );
+  app.querySelector('[data-act="toHQ"]').addEventListener("click", () => { hush(); showHQ(); });
+}
+
+/* ---------- boot ---------- */
+showProfileSelect();
+</script>
