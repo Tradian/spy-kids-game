@@ -26,7 +26,9 @@
     "web": "expo start --web",
     "validate": "tsx scripts/validate-content.ts",
     "voiceover-script": "tsx scripts/generate-voiceover-script.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "voiceover": "tsx scripts/generate-voiceover.ts",
+    "voice-manifest": "tsx scripts/generate-voice-manifest.ts"
   },
   "private": true
 }

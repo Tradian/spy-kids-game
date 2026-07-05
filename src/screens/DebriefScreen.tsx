@@ -8,7 +8,7 @@ import { stampsFor } from '../logic/adaptive';
 import { useApp } from '../state/AppContext';
 import { ScreenShell } from '../components/ScreenShell';
 import { BigButton } from '../components/BigButton';
-import { say, stopSpeaking } from '../audio/audioService';
+import { playSfx, say, stopSpeaking } from '../audio/audioService';
 import { LINES } from '../content/lines';
 
 interface Props {
@@ -30,8 +30,10 @@ export function DebriefScreen({ mission, results, promotedTo, newBadgeIds }: Pro
 
   useEffect(() => {
     if (promotedTo) {
+      playSfx('sfx_promotion');
       say(LINES.promotion);
     } else {
+      playSfx('sfx_stamp');
       say(mission.debriefLine, `debrief_${mission.id}`);
     }
     return stopSpeaking;

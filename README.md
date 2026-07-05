@@ -90,15 +90,35 @@ scroll message scripts and Hebrew audio before they ship to the kids** —
 default translation is the Tree of Life Version, divine name rendered
 "the LORD" / "Adonai".
 
-## Audio pipeline
+## Audio pipeline (ElevenLabs)
 
 1. `npm run voiceover-script` regenerates `docs/voiceover-script.md` from
-   the content files (it can never drift).
-2. Batch-generate mp3s with the existing AI voiceover pipeline, named
-   `<key>.mp3`, into `assets/vo/`.
-3. Register them in `VOICE_ASSETS` in `src/audio/audioService.ts`.
-   Unregistered lines keep falling back to TTS, so this can land
-   incrementally — do `sound_lock` prompts first, it's the workhorse.
+   the content files (it can never drift). Review it — this is the script.
+2. Generate the batch:
+
+   ```bash
+   ELEVENLABS_API_KEY=sk_... npm run voiceover            # core lines
+   ELEVENLABS_API_KEY=sk_... npm run voiceover -- --sfx   # + sound effects
+   ELEVENLABS_API_KEY=sk_... npm run voiceover -- --scroll # Scroll Room lines,
+                                    # ONLY after Ian approves scripts + Hebrew
+   ```
+
+   Voice defaults to the "George" stock voice; set `ELEVENLABS_VOICE_ID`
+   to use a chosen Spymaster voice. Files land in `assets/vo/` and
+   `assets/sfx/`; re-runs only fill gaps (delete a file to re-record it).
+3. `npm run voice-manifest` regenerates `src/audio/voiceAssets.ts` so the
+   native app bundles whatever exists. Missing lines keep falling back to
+   TTS, so the batch can land incrementally — do `sound_lock` prompts
+   first, it's the workhorse.
+4. Web version: copy `assets/vo` → `vo/` and `assets/sfx` → `sfx/` on the
+   `gh-pages` branch next to `index.html`. The page tries the mp3 for each
+   line and falls back to browser speech per-line.
+
+Sound effects (`sfx_correct`, `sfx_wrong`, `sfx_tick`, `sfx_vault`,
+`sfx_confetti`, `sfx_stamp`, `sfx_promotion`) are generated with the
+ElevenLabs sound-generation API and wired into the same moments in both
+apps; until generated, the native app uses haptics and the web version
+uses soft oscillator beeps.
 
 ## Content workflow
 

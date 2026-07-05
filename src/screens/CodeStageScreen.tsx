@@ -10,7 +10,7 @@ import { useApp } from '../state/AppContext';
 import { ScreenShell } from '../components/ScreenShell';
 import { OptionTile } from '../components/OptionTile';
 import { SpymasterBubble } from '../components/SpymasterBubble';
-import { say, stopSpeaking } from '../audio/audioService';
+import { playSfx, say, stopSpeaking } from '../audio/audioService';
 
 /**
  * The workhorse screen, spec section 3.5. Layout is constant across every
@@ -94,6 +94,7 @@ function Stage({ puzzle, onDone }: { puzzle: Puzzle; onDone: (r: StageResult) =>
   const expectedId = answerSeq[seqPos];
 
   const handleWrong = (o: PuzzleOption) => {
+    playSfx('sfx_wrong');
     setShakingId(o.id);
     setTimeout(() => setShakingId(null), 400);
     const nextMisses = misses + 1;
@@ -107,10 +108,12 @@ function Stage({ puzzle, onDone }: { puzzle: Puzzle; onDone: (r: StageResult) =>
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     if (seqPos + 1 < answerSeq.length) {
       // mid-sequence: quiet tick forward, fresh miss ladder per step
+      playSfx('sfx_tick');
       setSeqPos(seqPos + 1);
       setMisses(0);
       return;
     }
+    playSfx('sfx_correct');
     setSolved(true);
     say(nextCorrectLine());
     setTimeout(() => {

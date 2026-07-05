@@ -7,7 +7,7 @@ import { ScreenShell } from '../components/ScreenShell';
 import { BigButton } from '../components/BigButton';
 import { VaultDoor } from '../components/VaultDoor';
 import { Confetti } from '../components/Confetti';
-import { playFile, say, stopSpeaking } from '../audio/audioService';
+import { playFile, playSfx, say, stopSpeaking } from '../audio/audioService';
 import { LINES } from '../content/lines';
 import { completeMission, MissionOutcome } from '../logic/completeMission';
 import { markParentMessagePlayed, nextUnplayedParentMessage } from '../db/repo';
@@ -26,6 +26,7 @@ export function UnlockScreen({ mission, results }: { mission: Mission; results: 
   const isScroll = mission.track === 'scroll';
 
   useEffect(() => {
+    playSfx('sfx_vault');
     say(LINES.vaultOpening);
     if (!profile || completedOnce.current) return;
     completedOnce.current = true;
@@ -42,6 +43,7 @@ export function UnlockScreen({ mission, results }: { mission: Mission; results: 
 
   const onOpened = useCallback(() => {
     setOpened(true);
+    playSfx('sfx_confetti');
     say(mission.secretMessageLine, `secret_${mission.id}`);
   }, [mission]);
 
