@@ -3,7 +3,8 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { colors, radii, type } from '../theme';
 import { Mission, MissionStatus, Track } from '../types';
 import { missionsFor } from '../content/missions';
-import { getProgressForProfile } from '../db/repo';
+import { getProgressForProfile, listFieldOps } from '../db/repo';
+import { fieldOpAsMission } from '../logic/fieldOps';
 import { makeDailyMission, todayKey } from '../logic/puzzleEngine';
 import { useApp } from '../state/AppContext';
 import { ScreenShell } from '../components/ScreenShell';
@@ -15,6 +16,7 @@ interface Node {
   status: MissionStatus;
   stamps: number;
   daily?: boolean;
+  field?: boolean;
 }
 
 /**
@@ -52,6 +54,20 @@ export function MissionMapScreen({ track }: { track: Track }) {
           stamps: dailyDone ? done.get(daily.id)!.stamps : 0,
           daily: true,
         });
+        // Field Ops lead the map: a parent-built real-world mission is
+        // the mission of the day.
+        const fieldOps = await listFieldOps();
+        pathNodes.unshift(
+          ...fieldOps.map((op): Node => {
+            const row = done.get(op.id);
+            return {
+              mission: fieldOpAsMission(op, profile),
+              status: row ? 'completed' : 'available',
+              stamps: row ? row.stamps : 0,
+              field: true,
+            };
+          }),
+        );
       }
       setNodes(pathNodes);
     })();
@@ -122,6 +138,7 @@ function MissionNode({ node, onPress, dim }: { node: Node; onPress: () => void; 
           node.status === 'completed' && styles.nodeDone,
           node.status === 'locked' && styles.nodeLocked,
           node.daily && styles.nodeDaily,
+          node.field && styles.nodeField,
           active && { transform: [{ scale }] },
           dim && { opacity: 0.45 },
         ]}
@@ -132,6 +149,7 @@ function MissionNode({ node, onPress, dim }: { node: Node; onPress: () => void; 
           <Text style={styles.stamps}>{'⭐'.repeat(node.stamps)}</Text>
         )}
         {node.daily && node.status !== 'completed' && <Text style={styles.dailyTag}>TODAY</Text>}
+        {node.field && <Text style={styles.fieldTag}>FIELD OP</Text>}
       </Animated.View>
     </Pressable>
   );
@@ -151,6 +169,7 @@ const styles = StyleSheet.create({
   nodeDone: { borderColor: colors.mint, opacity: 0.9 },
   nodeLocked: { borderColor: colors.outline, opacity: 0.55 },
   nodeDaily: { borderColor: colors.lilac },
+  nodeField: { borderColor: colors.sky },
   nodeEmoji: { fontSize: 48 },
   nodeTitle: {
     color: colors.textBright,
@@ -162,6 +181,13 @@ const styles = StyleSheet.create({
   stamps: { fontSize: 20, marginTop: 4 },
   dailyTag: {
     color: colors.lilac,
+    fontWeight: '900',
+    fontSize: type.small,
+    marginTop: 4,
+    letterSpacing: 2,
+  },
+  fieldTag: {
+    color: colors.sky,
     fontWeight: '900',
     fontSize: type.small,
     marginTop: 4,

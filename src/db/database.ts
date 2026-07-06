@@ -119,6 +119,12 @@ export async function initDatabase(): Promise<void> {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS field_ops (
+      id TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS adaptive_state (
       profile_id TEXT PRIMARY KEY,
       first_try_streak INTEGER NOT NULL DEFAULT 0,

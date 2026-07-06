@@ -1,5 +1,6 @@
 import { getDb } from './database';
 import {
+  FieldOp,
   MissionStatus,
   ParentMessage,
   Profile,
@@ -214,6 +215,29 @@ export async function listEarnedBadgeIds(profileId: string): Promise<string[]> {
     [profileId],
   );
   return rows.map((r) => r.badge_id);
+}
+
+// ---------------------------------------------------------------------------
+// Field Ops — parent-built real-world missions. Device-only by design:
+// the family's place names live in this database and nowhere else.
+// ---------------------------------------------------------------------------
+
+export async function listFieldOps(): Promise<FieldOp[]> {
+  const rows = await getDb().getAllAsync<{ data: string }>(
+    'SELECT data FROM field_ops ORDER BY created_at ASC',
+  );
+  return rows.map((r) => JSON.parse(r.data) as FieldOp);
+}
+
+export async function saveFieldOp(op: FieldOp): Promise<void> {
+  await getDb().runAsync(
+    'INSERT OR REPLACE INTO field_ops (id, data, created_at) VALUES (?, ?, ?)',
+    [op.id, JSON.stringify(op), op.createdAt],
+  );
+}
+
+export async function deleteFieldOp(id: string): Promise<void> {
+  await getDb().runAsync('DELETE FROM field_ops WHERE id = ?', [id]);
 }
 
 // ---------------------------------------------------------------------------

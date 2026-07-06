@@ -1,15 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { AudioModule, RecordingPresets, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import { colors, radii, TOUCH_TARGET, type } from '../theme';
-import { ParentMessage, RANK_LABELS } from '../types';
+import { FieldOp, FieldSkill, FieldStage, ParentMessage, RANK_LABELS } from '../types';
 import {
   countCompletedMissions,
+  deleteFieldOp,
+  listFieldOps,
   listParentMessages,
+  saveFieldOp,
   saveParentMessage,
   updateProfile,
 } from '../db/repo';
+import { SKILL_LABELS } from '../logic/fieldOps';
 import { useApp } from '../state/AppContext';
 import { ScreenShell } from '../components/ScreenShell';
 import { playFile } from '../audio/audioService';
@@ -27,12 +31,14 @@ export function ParentAreaScreen() {
   const [missionCount, setMissionCount] = useState(0);
   const [scrollCount, setScrollCount] = useState(0);
   const [messages, setMessages] = useState<ParentMessage[]>([]);
+  const [fieldOps, setFieldOps] = useState<FieldOp[]>([]);
 
   const reload = useCallback(async () => {
     if (!profile) return;
     setMissionCount(await countCompletedMissions(profile.id));
     setScrollCount(await countCompletedMissions(profile.id, 'scroll'));
     setMessages(await listParentMessages(profile.id));
+    setFieldOps(await listFieldOps());
   }, [profile]);
 
   useEffect(() => {
@@ -87,6 +93,37 @@ export function ParentAreaScreen() {
               </Pressable>
             </View>
           ))}
+        </Section>
+
+        {/* Field Ops */}
+        <Section title="Field Ops — real-world missions">
+          <Text style={styles.bodySoft}>
+            Build a mission for a walk or a hunt: name each stop with your own names for places, pick
+            what to practice there, and write the secret message for the final vault. Everything you
+            type stays on this device only — it is never uploaded anywhere.
+          </Text>
+          {fieldOps.map((op) => (
+            <View key={op.id} style={styles.messageRow}>
+              <Text style={styles.body}>
+                {op.icon} {op.title} · {op.stages.length} {op.stages.length === 1 ? 'stop' : 'stops'}
+              </Text>
+              <Pressable
+                style={styles.smallBtn}
+                onPress={async () => {
+                  await deleteFieldOp(op.id);
+                  await reload();
+                }}
+              >
+                <Text style={styles.smallBtnText}>✕ Remove</Text>
+              </Pressable>
+            </View>
+          ))}
+          <FieldOpBuilder
+            onSaved={async (op) => {
+              await saveFieldOp(op);
+              await reload();
+            }}
+          />
         </Section>
 
         {/* Scroll Room */}
@@ -160,6 +197,130 @@ function Choice({ label, active, onPress }: { label: string; active: boolean; on
     >
       <Text style={[styles.choiceText, active && { color: colors.textOnGold }]}>{label}</Text>
     </Pressable>
+  );
+}
+
+const FO_ICONS = ['💎', '🧳', '🗺️', '🐾', '🌳', '🛝', '🚁', '🔦'];
+const FO_SKILLS = Object.keys(SKILL_LABELS) as FieldSkill[];
+
+function FieldOpBuilder({ onSaved }: { onSaved: (op: FieldOp) => Promise<void> }) {
+  const [title, setTitle] = useState('');
+  const [briefing, setBriefing] = useState('');
+  const [secret, setSecret] = useState('');
+  const [icon, setIcon] = useState(FO_ICONS[0]);
+  const [stages, setStages] = useState<FieldStage[]>([
+    { location: '', skill: 'surprise' },
+    { location: '', skill: 'surprise' },
+  ]);
+
+  const setStage = (i: number, patch: Partial<FieldStage>) =>
+    setStages((prev) => prev.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+
+  const save = async () => {
+    const cleaned = stages.filter((s) => s.location.trim());
+    if (!title.trim() || cleaned.length === 0) return;
+    await onSaved({
+      id: `field_${Date.now().toString(36)}`,
+      title: title.trim(),
+      icon,
+      briefing: briefing.trim(),
+      secret: secret.trim(),
+      stages: cleaned,
+      createdAt: Date.now(),
+    });
+    setTitle('');
+    setBriefing('');
+    setSecret('');
+    setStages([{ location: '', skill: 'surprise' }, { location: '', skill: 'surprise' }]);
+  };
+
+  return (
+    <View style={styles.foForm}>
+      <View style={styles.foIconRow}>
+        {FO_ICONS.map((e) => (
+          <Pressable
+            key={e}
+            style={[styles.foIcon, icon === e && styles.foIconPicked]}
+            onPress={() => setIcon(e)}
+          >
+            <Text style={styles.foIconEmoji}>{e}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <TextInput
+        style={styles.foInput}
+        value={title}
+        onChangeText={setTitle}
+        maxLength={40}
+        placeholder="Mission name (e.g. Operation Jules)"
+        placeholderTextColor={colors.textSoft}
+      />
+      <TextInput
+        style={styles.foInput}
+        value={briefing}
+        onChangeText={setBriefing}
+        maxLength={200}
+        placeholder="Briefing the Spymaster reads (e.g. The thieves grabbed Jules! Follow their trail...)"
+        placeholderTextColor={colors.textSoft}
+        multiline
+      />
+      {stages.map((s, i) => (
+        <View key={i} style={styles.foStage}>
+          <TextInput
+            style={[styles.foInput, styles.foStageInput]}
+            value={s.location}
+            onChangeText={(t) => setStage(i, { location: t })}
+            maxLength={30}
+            placeholder={`Stop ${i + 1} name (e.g. Myrtle Cove)`}
+            placeholderTextColor={colors.textSoft}
+          />
+          <View style={styles.foSkillRow}>
+            {FO_SKILLS.map((k) => (
+              <Pressable
+                key={k}
+                style={[styles.foSkill, s.skill === k && styles.foSkillOn]}
+                onPress={() => setStage(i, { skill: k })}
+              >
+                <Text style={[styles.foSkillText, s.skill === k && styles.foSkillTextOn]}>
+                  {SKILL_LABELS[k]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ))}
+      <View style={styles.foActions}>
+        {stages.length < 6 && (
+          <Pressable
+            style={styles.smallBtn}
+            onPress={() => setStages((prev) => [...prev, { location: '', skill: 'surprise' }])}
+          >
+            <Text style={styles.smallBtnText}>＋ Add a stop</Text>
+          </Pressable>
+        )}
+        {stages.length > 1 && (
+          <Pressable style={styles.smallBtn} onPress={() => setStages((prev) => prev.slice(0, -1))}>
+            <Text style={styles.smallBtnText}>－ Remove last stop</Text>
+          </Pressable>
+        )}
+      </View>
+      <TextInput
+        style={styles.foInput}
+        value={secret}
+        onChangeText={setSecret}
+        maxLength={200}
+        placeholder="Secret message in the final vault (e.g. You found Jules! Check under the big slide!)"
+        placeholderTextColor={colors.textSoft}
+        multiline
+      />
+      <Pressable
+        style={[styles.foSave, !title.trim() && { opacity: 0.4 }]}
+        onPress={save}
+        disabled={!title.trim()}
+      >
+        <Text style={styles.foSaveText}>💾 Save mission</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -263,4 +424,52 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   smallBtnText: { color: colors.textBright, fontWeight: '800' },
+  foForm: { marginTop: 10 },
+  foIconRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
+  foIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  foIconPicked: { borderColor: colors.sky },
+  foIconEmoji: { fontSize: 24 },
+  foInput: {
+    backgroundColor: colors.bgRaised,
+    borderRadius: 14,
+    color: colors.textBright,
+    fontSize: 16,
+    padding: 12,
+    marginBottom: 8,
+  },
+  foStage: { marginBottom: 4 },
+  foStageInput: { marginBottom: 6 },
+  foSkillRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
+  foSkill: {
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgRaised,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  foSkillOn: { backgroundColor: colors.sky },
+  foSkillText: { color: colors.textSoft, fontSize: 13, fontWeight: '700' },
+  foSkillTextOn: { color: colors.bgDeep },
+  foActions: { flexDirection: 'row', marginBottom: 8, gap: 10 },
+  foSave: {
+    minHeight: TOUCH_TARGET,
+    borderRadius: radii.pill,
+    backgroundColor: colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  foSaveText: { color: '#06301f', fontSize: type.body, fontWeight: '900' },
 });

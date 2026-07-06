@@ -93,6 +93,11 @@ export interface Puzzle {
   notch: 1 | 2 | 3;
   track: Track;
   payload: PuzzlePayload;
+  /**
+   * True when the prompt was rewritten at runtime (e.g. a Field Op location
+   * intro) so the recorded voiceover no longer matches — always speak fresh.
+   */
+  noVo?: boolean;
 }
 
 export interface Mission {
@@ -118,6 +123,8 @@ export interface Mission {
    * current difficulty notch so missions adapt without changing shape.
    */
   puzzleIdsByNotch: Record<1 | 2 | 3, string[]>;
+  /** Present only on missions built from a parent's Field Op. */
+  fieldStages?: FieldStage[];
 }
 
 export interface Gadget {
@@ -168,6 +175,30 @@ export interface ParentMessage {
   audioPath: string;
   played: boolean;
   label: string;
+  createdAt: number;
+}
+
+/**
+ * Field Ops: parent-authored real-world missions (a walk, a hunt). Each
+ * stage is a family-named place plus a skill to practice there. Stored
+ * ONLY in the on-device database — place names never leave the device.
+ */
+export type FieldSkill =
+  | 'surprise' | 'letters' | 'sounds' | 'counting'
+  | 'patterns' | 'numbers' | 'words' | 'ciphers';
+
+export interface FieldStage {
+  location: string;
+  skill: FieldSkill;
+}
+
+export interface FieldOp {
+  id: string;
+  title: string;
+  icon: string;
+  briefing: string;
+  secret: string;
+  stages: FieldStage[];
   createdAt: number;
 }
 

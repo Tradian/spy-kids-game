@@ -1,5 +1,6 @@
 import { Mission, Profile, Puzzle, PuzzleOption } from '../types';
 import { puzzleById, puzzlesFor } from '../content/puzzles';
+import { resolveFieldStages } from './fieldOps';
 
 /**
  * Resolves a mission's stage list into concrete puzzles for a profile,
@@ -9,6 +10,7 @@ import { puzzleById, puzzlesFor } from '../content/puzzles';
  */
 
 export function resolveMissionPuzzles(mission: Mission, profile: Profile): Puzzle[] {
+  if (mission.fieldStages?.length) return resolveFieldStages(mission, profile);
   const ids = mission.puzzleIdsByNotch[profile.difficultyNotch];
   let nameCodeCount = 0;
   return ids.map((id) =>

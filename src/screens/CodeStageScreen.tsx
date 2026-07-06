@@ -83,8 +83,10 @@ function Stage({ puzzle, onDone }: { puzzle: Puzzle; onDone: (r: StageResult) =>
   const [solved, setSolved] = useState(false);
   const everGlowed = useRef(false);
 
+  const promptKey = puzzle.noVo ? undefined : `prompt_${puzzle.id}`;
+
   useEffect(() => {
-    say(payload.promptLine, puzzle.id ? `prompt_${puzzle.id}` : undefined);
+    say(payload.promptLine, promptKey);
     return stopSpeaking;
     // re-prompt only when the puzzle changes
   }, [puzzle.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -100,7 +102,7 @@ function Stage({ puzzle, onDone }: { puzzle: Puzzle; onDone: (r: StageResult) =>
     const nextMisses = misses + 1;
     setMisses(nextMisses);
     if (nextMisses === 1) say(nextWrongLine());
-    else if (nextMisses === 2) say(payload.hintLine, `hint_${puzzle.id}`);
+    else if (nextMisses === 2) say(payload.hintLine, puzzle.noVo ? undefined : `hint_${puzzle.id}`);
     else say(LINES.glowNudge);
   };
 
@@ -179,7 +181,7 @@ function Stage({ puzzle, onDone }: { puzzle: Puzzle; onDone: (r: StageResult) =>
         )}
       </View>
 
-      <SpymasterBubble line={payload.promptLine} audioKey={`prompt_${puzzle.id}`} />
+      <SpymasterBubble line={payload.promptLine} audioKey={promptKey} />
 
       {/* Answer area */}
       <View style={styles.options}>
