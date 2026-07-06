@@ -223,6 +223,8 @@
   .node.daily  { border-color: var(--lilac); }
   .node.pulse  { animation: node-pulse 1.4s ease-in-out infinite; }
   @keyframes node-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .node.field { border-color: var(--sky); }
+  .field-tag { color: var(--sky); font-weight: 900; font-size: 12px; letter-spacing: 2.5px; }
   .daily-tag { color: var(--lilac); font-weight: 900; font-size: 12px; letter-spacing: 2.5px; }
   .limit-banner {
     background: var(--bg-panel);
@@ -538,6 +540,48 @@
   }
   .choice.on { background: var(--gold); color: var(--text-on-gold); }
 
+  .fo-input {
+    background: var(--bg-raised);
+    border: 2px solid var(--outline);
+    border-radius: 14px;
+    color: var(--text-bright);
+    font-size: 16px;
+    font-family: inherit;
+    padding: 12px;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .fo-stage-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .fo-stage-row input { flex: 1; margin-bottom: 0; }
+  .fo-stage-row select {
+    background: var(--bg-raised);
+    border: 2px solid var(--outline);
+    border-radius: 14px;
+    color: var(--text-bright);
+    font-size: 14px;
+    font-family: inherit;
+    padding: 12px 8px;
+    max-width: 130px;
+  }
+  .fo-remove { background: none; border: none; color: var(--coral); font-size: 20px; cursor: pointer; padding: 8px; }
+  .fo-add {
+    background: var(--bg-raised); border: 2px dashed var(--outline); border-radius: 14px;
+    color: var(--text-soft); font-size: 15px; font-weight: 700; padding: 12px; width: 100%;
+    cursor: pointer; margin-bottom: 10px;
+  }
+  .fo-save {
+    background: var(--mint); border: none; border-radius: 999px; color: #06301f;
+    font-size: 17px; font-weight: 900; padding: 14px; width: 100%; cursor: pointer;
+    min-height: 56px;
+  }
+  .fo-existing { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; gap: 8px; }
+  .fo-icon-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .fo-icon {
+    width: 52px; height: 52px; font-size: 26px; border-radius: 999px;
+    border: 3px solid transparent; background: var(--bg-raised); cursor: pointer;
+  }
+  .fo-icon.picked { border-color: var(--sky); }
+
   .check-flash {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -600,6 +644,11 @@ function defaultState() {
 }
 const stateFor = (pid) => ({ ...defaultState(), ...store.get("state." + pid, {}) });
 const saveState = (pid, s) => store.set("state." + pid, s);
+
+/* Field Ops: parent-authored real-world missions. Stored ONLY in this
+   browser's localStorage — real place names never leave the device. */
+const listFieldOps = () => store.get("fieldOps", []);
+const saveFieldOps = (list) => store.set("fieldOps", list);
 
 /* =============================== audio =============================== */
 
@@ -773,6 +822,49 @@ function makeDailyMission(profile, st) {
     gadgetRewardId: "g_radio",
     puzzleIdsByNotch: { 1: ids, 2: ids, 3: ids },
   };
+}
+
+const SKILL_TEMPLATES = {
+  letters: "letter_match", sounds: "sound_lock", counting: "count_gadgets",
+  patterns: "pattern_breaker", numbers: "missing_number", words: "sight_word",
+  ciphers: "shape_cipher",
+};
+const SKILL_LABELS = {
+  surprise: "Surprise me", letters: "Letters", sounds: "Letter sounds", counting: "Counting",
+  patterns: "Patterns", numbers: "Numbers", words: "Sight words", ciphers: "Shape codes",
+};
+
+function fieldOpsAsMission(f, st) {
+  return {
+    id: f.id, title: f.title, rank: st.rank, track: "core", icon: f.icon || "💎",
+    briefingLine: f.briefing || ("Agent, a field mission! " + f.title + ". Crack every code on the trail!"),
+    debriefLine: "Field mission complete, Agent. Headquarters is amazed at your outdoor skills. Spymaster out!",
+    secretMessageLine: f.secret || "Mission accomplished, Agent!",
+    gadgetRewardId: CONTENT.gadgets[hashString(f.id) % CONTENT.gadgets.length].id,
+    fieldStages: f.stages,
+  };
+}
+
+function resolveFieldStages(mission, st) {
+  return mission.fieldStages.map((stage, i) => {
+    const tkey = SKILL_TEMPLATES[stage.skill];
+    let pool = [];
+    if (tkey) {
+      for (const notch of [st.notch, 2, 1, 3]) {
+        pool = CONTENT.puzzles.filter((p) => p.templateKey === tkey && p.track === "core" && p.notch === notch);
+        if (pool.length) break;
+      }
+    }
+    if (!pool.length) pool = CONTENT.puzzles.filter((p) => p.track === "core" && p.notch === st.notch);
+    if (!pool.length) pool = CONTENT.puzzles.filter((p) => p.track === "core");
+    const base = pool[hashString(mission.id + ":" + i) % pool.length];
+    const intro = stage.location ? "Agent, we made it to " + stage.location + "! " : "";
+    return {
+      ...base,
+      noVo: true, // prompt has a live location intro, so always speak it fresh
+      payload: { ...base.payload, promptLine: intro + base.payload.promptLine },
+    };
+  });
 }
 
 /* Adaptive rules, identical to the app: 3 first-tries in a row raise the
@@ -983,6 +1075,8 @@ function showParentArea() {
     + "<p>Missions completed: " + done + (st.scrollRoom ? " — including " + scrollDone + " scroll " + (scrollDone === 1 ? "mission" : "missions") + "." : ".") + "</p>"
     + '<p class="soft">The game quietly raises the level after three first-try answers in a row, and lowers it if a mission needed two glowing hints. ' + esc(p.name) + " only ever sees the promotion ceremony.</p></div>"
 
+    + fieldOpsSectionHtml()
+
     + '<div class="parent-section"><h3>Scroll Room</h3><div class="switch-row"><p>Unlock the Scroll Room (scroll missions with Hebrew letters and a verse as each reward)</p>'
     + '<button class="switch' + (st.scrollRoom ? " on" : "") + '" id="sw-scroll" role="switch" aria-checked="' + st.scrollRoom + '"></button></div></div>'
 
@@ -1003,6 +1097,87 @@ function showParentArea() {
   app.querySelector("#sw-lock").addEventListener("click", () => { st.difficultyLocked = !st.difficultyLocked; save(); showParentArea(); });
   app.querySelectorAll("[data-limit]").forEach((b) => b.addEventListener("click", () => { st.missionsPerSession = +b.dataset.limit; save(); showParentArea(); }));
   app.querySelectorAll("[data-notch]").forEach((b) => b.addEventListener("click", () => { st.notch = +b.dataset.notch; save(); showParentArea(); }));
+  wireFieldOpsSection();
+}
+
+/* ---------- Field Ops builder (parent-authored real-world missions) ---------- */
+
+const FO_ICONS = ["💎", "🧳", "🗺️", "🐾", "🌳", "🛝", "🚁", "🔦"];
+
+function fieldOpsSectionHtml() {
+  const existing = listFieldOps();
+  return '<div class="parent-section"><h3>Field Ops — real-world missions</h3>'
+    + '<p class="soft">Build a mission for a walk or a hunt: name each stop (your own names for places), pick what to practice there, and write the secret message for the final vault. Everything you type stays on this device only — it is never uploaded anywhere.</p>'
+    + existing.map((f) =>
+        '<div class="fo-existing"><p style="margin:0">' + f.icon + " <strong>" + esc(f.title) + "</strong> · " + f.stages.length + " stops</p>"
+        + '<button class="fo-remove" data-fo-del="' + f.id + '" aria-label="Delete mission">✕</button></div>'
+      ).join("")
+    + '<div id="fo-form" style="margin-top:10px">'
+    + '<div class="fo-icon-row">' + FO_ICONS.map((e, i) => '<button class="fo-icon' + (i === 0 ? " picked" : "") + '" data-fo-icon="' + e + '">' + e + "</button>").join("") + "</div>"
+    + '<input class="fo-input" id="fo-title" maxlength="40" placeholder="Mission name (e.g. Operation Jules)">'
+    + '<input class="fo-input" id="fo-brief" maxlength="200" placeholder="Briefing the Spymaster reads (e.g. The thieves grabbed Jules! Follow their trail...)">'
+    + '<div id="fo-stages">' + foStageRowHtml() + foStageRowHtml() + "</div>"
+    + '<button class="fo-add" id="fo-add">＋ Add a stop</button>'
+    + '<input class="fo-input" id="fo-secret" maxlength="200" placeholder="Secret message in the final vault (e.g. You found Jules! Check under the big slide!)">'
+    + '<button class="fo-save" id="fo-save">💾 Save mission</button>'
+    + "</div></div>";
+}
+
+function foStageRowHtml() {
+  return '<div class="fo-stage-row">'
+    + '<input maxlength="30" class="fo-input" placeholder="Stop name (e.g. Myrtle Cove)">'
+    + '<select>' + Object.keys(SKILL_LABELS).map((k) => '<option value="' + k + '">' + SKILL_LABELS[k] + "</option>").join("") + "</select>"
+    + '<button class="fo-remove" data-fo-row-del aria-label="Remove stop">✕</button>'
+    + "</div>";
+}
+
+function wireFieldOpsSection() {
+  let icon = FO_ICONS[0];
+  app.querySelectorAll("[data-fo-icon]").forEach((b) =>
+    b.addEventListener("click", () => {
+      icon = b.dataset.foIcon;
+      app.querySelectorAll("[data-fo-icon]").forEach((x) => x.classList.toggle("picked", x === b));
+    }),
+  );
+  app.querySelectorAll("[data-fo-del]").forEach((b) =>
+    b.addEventListener("click", () => {
+      saveFieldOps(listFieldOps().filter((f) => f.id !== b.dataset.foDel));
+      showParentArea();
+    }),
+  );
+  const stages = app.querySelector("#fo-stages");
+  const wireRowDeletes = () => {
+    app.querySelectorAll("[data-fo-row-del]").forEach((b) => {
+      b.onclick = () => {
+        if (stages.children.length > 1) b.closest(".fo-stage-row").remove();
+      };
+    });
+  };
+  wireRowDeletes();
+  app.querySelector("#fo-add").addEventListener("click", () => {
+    if (stages.children.length >= 6) return;
+    stages.insertAdjacentHTML("beforeend", foStageRowHtml());
+    wireRowDeletes();
+  });
+  app.querySelector("#fo-save").addEventListener("click", () => {
+    const title = app.querySelector("#fo-title").value.trim();
+    if (!title) { app.querySelector("#fo-title").focus(); return; }
+    const rows = [...stages.querySelectorAll(".fo-stage-row")];
+    const stageData = rows
+      .map((r) => ({ location: r.querySelector("input").value.trim(), skill: r.querySelector("select").value }))
+      .filter((x) => x.location || rows.length === 1);
+    if (!stageData.length) return;
+    const mission = {
+      id: "field_" + Date.now().toString(36),
+      title,
+      icon,
+      briefing: app.querySelector("#fo-brief").value.trim(),
+      secret: app.querySelector("#fo-secret").value.trim(),
+      stages: stageData,
+    };
+    saveFieldOps([...listFieldOps(), mission]);
+    showParentArea();
+  });
 }
 
 /* ---------- mission map ---------- */
@@ -1024,6 +1199,12 @@ function showMap(track) {
     const daily = makeDailyMission(p, st);
     const row = st.progress[daily.id];
     nodes.push({ m: daily, status: row ? "done" : "open", stamps: row ? row.stamps : 0, daily: true });
+    // Field Ops first — when a real-world mission exists, it's the mission of the day
+    const fieldNodes = listFieldOps().map((f) => {
+      const fr = st.progress[f.id];
+      return { m: fieldOpsAsMission(f, st), status: fr ? "done" : "open", stamps: fr ? fr.stamps : 0, field: true };
+    });
+    nodes.unshift(...fieldNodes);
   }
 
   render(
@@ -1033,11 +1214,12 @@ function showMap(track) {
     + nodes.map((n, i) =>
         '<div class="map-row ' + (i % 2 ? "right" : "left") + '">'
         + '<button class="node ' + (n.status === "done" ? "done" : n.status === "locked" ? "locked" : "pulse")
-        + (n.daily ? " daily" : "") + '"' + (limitHit ? ' style="opacity:0.45"' : "") + ' data-node="' + i + '">'
+        + (n.daily ? " daily" : "") + (n.field ? " field" : "") + '"' + (limitHit ? ' style="opacity:0.45"' : "") + ' data-node="' + i + '">'
         + '<span class="icon">' + (n.status === "locked" ? "🔒" : n.m.icon) + "</span>"
         + '<span class="title">' + esc(n.m.title) + "</span>"
         + (n.status === "done" ? '<span class="stamps">' + "⭐".repeat(n.stamps) + "</span>" : "")
         + (n.daily && n.status !== "done" ? '<span class="daily-tag">TODAY</span>' : "")
+        + (n.field ? '<span class="field-tag">FIELD OP</span>' : "")
         + "</button></div>"
       ).join("")
     + "</div></div>",
@@ -1075,7 +1257,9 @@ function showBriefing(mission) {
 /* ---------- code stage ---------- */
 
 function startMission(mission) {
-  const puzzles = resolveMissionPuzzles(mission, current.profile, current.st);
+  const puzzles = mission.fieldStages
+    ? resolveFieldStages(mission, current.st)
+    : resolveMissionPuzzles(mission, current.profile, current.st);
   runStage(mission, puzzles, 0, []);
 }
 
@@ -1117,10 +1301,11 @@ function runStage(mission, puzzles, stageIndex, results) {
     { scrollWorld: isScroll },
   );
 
-  say(payload.promptLine, "prompt_" + puzzle.id);
+  const promptKey = puzzle.noVo ? undefined : "prompt_" + puzzle.id;
+  say(payload.promptLine, promptKey);
 
   app.querySelector('[data-act="quit"]').addEventListener("click", () => { hush(); showHQ(); });
-  app.querySelector("#replay").addEventListener("click", () => say(payload.promptLine, "prompt_" + puzzle.id));
+  app.querySelector("#replay").addEventListener("click", () => say(payload.promptLine, promptKey));
 
   const tiles = [...app.querySelectorAll("[data-opt]")];
   const seqBoxes = [...app.querySelectorAll(".seq-box")];
@@ -1145,7 +1330,7 @@ function runStage(mission, puzzles, stageIndex, results) {
         blip("wrong");
         t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
         if (misses === 1) say(nextWrong());
-        else if (misses === 2) say(payload.hintLine, "hint_" + puzzle.id);
+        else if (misses === 2) say(payload.hintLine, puzzle.noVo ? undefined : "hint_" + puzzle.id);
         else { everGlowed = true; say(CONTENT.lines.glowNudge); setGlow(); }
         return;
       }
